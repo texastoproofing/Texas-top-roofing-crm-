@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+.vercel
+# Datos de clientes: nunca se suben al repositorio
+private/
+*.private.sql
+*.private.json

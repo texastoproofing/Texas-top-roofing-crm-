@@ -1,0 +1,9 @@
+{
+  "name": "TTR CRM",
+  "short_name": "TTR CRM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#c8102e",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
