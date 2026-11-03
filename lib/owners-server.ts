@@ -95,7 +95,9 @@ export async function importOwnersForTerritory(territoryId: string, limit = 10) 
     let failed = false;
     for (const pr of providers) {
       try {
-        for (const h of await pr.fetch(env, word)) if (streetMatches(h.street, s.name)) found.set(`${pr.key}|${h.prop_id}`, { ...h, source: pr.key });
+        // Casas en la línea entre condados aparecen en ambos registros: se queda la primera fuente (Williamson antes que Travis)
+        const seen = new Set([...found.values()].map((x) => x.number));
+        for (const h of await pr.fetch(env, word)) if (streetMatches(h.street, s.name) && !(h.number != null && seen.has(h.number))) found.set(`${pr.key}|${h.prop_id}`, { ...h, source: pr.key });
       } catch { notes.push(`${s.name}: ${pr.label} no respondió`); failed = true; }
     }
     if (failed) break;
