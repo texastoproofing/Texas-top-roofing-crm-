@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { STATUSES } from "@/lib/constants";
 import { localToISO, num, str } from "@/lib/format";
+import { removeJobStorage } from "@/lib/files-server";
 
 function jobFromForm(fd: FormData) {
   return {
@@ -121,6 +122,7 @@ export async function addJobNote(id: string, contactId: string, fd: FormData) {
 
 export async function deleteJob(id: string) {
   const { supabase } = await getSession();
+  await removeJobStorage(supabase, id); // fotos y documentos del trabajo
   const { error } = await supabase.from("jobs").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/trabajos");

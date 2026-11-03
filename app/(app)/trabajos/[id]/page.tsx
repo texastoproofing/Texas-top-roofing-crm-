@@ -10,8 +10,10 @@ import { JobFields } from "@/components/JobForm";
 import { TaskForm, TaskList } from "@/components/TaskList";
 import { addJobNote, deleteJob, setJobStatus, updateJob } from "../actions";
 import { createAppointment, deleteAppointment } from "../../calendario/actions";
+import { JobFilesTab } from "./JobFilesTab";
 
-export default async function JobPage({ params }: { params: { id: string } }) {
+export default async function JobPage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string } }) {
+  const tab = searchParams.tab === "archivos" ? "archivos" : "resumen";
   const { supabase, profile } = await getSession();
   const { data: j } = await supabase.from("jobs")
     .select("*, contact:contacts(*), rep:profiles!jobs_sales_rep_id_fkey(full_name), pm:profiles!jobs_pm_id_fkey(full_name), territory:territories(code, name)")
@@ -29,6 +31,7 @@ export default async function JobPage({ params }: { params: { id: string } }) {
     listProfiles(),
     supabase.from("territories").select("id, code, name").order("priority"),
   ]);
+  const { count: fileCount } = await supabase.from("job_files").select("id", { count: "exact", head: true }).eq("job_id", j.id);
   const active = users.filter((u) => u.active);
   const addr = [j.address ?? c?.address, j.city ?? c?.city, j.zip ?? c?.zip].filter(Boolean);
   const map = mapsHref([...addr, "TX"]);
@@ -53,6 +56,18 @@ export default async function JobPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      <nav className="flex gap-1 border-b border-gray-200 mb-5 -mx-4 px-4 overflow-x-auto" aria-label="Secciones del trabajo">
+        {[{ k: "resumen", l: "Resumen", href: `/trabajos/${j.id}` }, { k: "archivos", l: `Fotos y documentos${fileCount ? ` (${fileCount})` : ""}`, href: `/trabajos/${j.id}?tab=archivos` }].map((t) => (
+          <Link key={t.k} href={t.href} scroll={false} aria-current={tab === t.k ? "page" : undefined}
+            className={`whitespace-nowrap px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px ${tab === t.k ? "border-brand text-brand" : "border-transparent text-gray-600"}`}>
+            {t.l}
+          </Link>
+        ))}
+      </nav>
+
+      {tab === "archivos" ? (
+        <JobFilesTab jobId={j.id} me={profile.id} canDeleteAny={profile.role !== "vendedor"} />
+      ) : (
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <section className="card p-4">
@@ -160,6 +175,7 @@ export default async function JobPage({ params }: { params: { id: string } }) {
           </details>
         </aside>
       </div>
+      )}
     </>
   );
 }

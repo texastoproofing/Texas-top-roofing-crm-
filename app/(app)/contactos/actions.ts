@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { num, str } from "@/lib/format";
+import { removeJobStorage } from "@/lib/files-server";
 
 function contactFromForm(fd: FormData) {
   return {
@@ -44,6 +45,8 @@ export async function updateContact(id: string, fd: FormData) {
 
 export async function deleteContact(id: string) {
   const { supabase } = await getSession();
+  const { data: jobs } = await supabase.from("jobs").select("id").eq("contact_id", id);
+  for (const j of jobs ?? []) await removeJobStorage(supabase, j.id); // fotos y documentos
   const { error } = await supabase.from("contacts").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/contactos");
