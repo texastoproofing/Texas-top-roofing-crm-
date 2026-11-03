@@ -6,7 +6,7 @@ import { todayTX } from "@/lib/format";
 import { isUuid } from "@/lib/files";
 import { DEFAULT_WEIGHTS, type Weights } from "@/lib/storm";
 import { REGIONS } from "@/lib/regions";
-import { importNexrad, importZipOutlines } from "@/lib/region-server";
+import { importHailpoint, importNexrad, importZipOutlines } from "@/lib/region-server";
 
 type R<T = {}> = ({ ok: true } & T) | { ok: false; error: string };
 const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
@@ -143,5 +143,21 @@ export async function importRegionRadar(regionKey: string, fromDate: string): Pr
   } catch (e) {
     const m = (e as Error).message;
     return { ok: false, error: m.includes("SUPABASE_SERVICE_ROLE_KEY") ? m : `NOAA no respondió para ${fromDate}–${to}. Puedes reanudar.` };
+  }
+}
+
+// Mapas de HailPoint enviados desde la pestaña de HailPoint del administrador (ver /tormentas/importar)
+export async function importHailpointMap(input: { region: string; id: string; date: string; polygons: { label: string; pts: [number, number][] }[] }): Promise<R<{ swaths: number; stats: number; polygons: number }>> {
+  const { supabase, profile } = await requireAdmin();
+  const region = REGIONS.find((r) => r.key === input.region);
+  if (!region) return { ok: false, error: "Región no válida." };
+  if (!/^\d+$/.test(input.id) || !/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !Array.isArray(input.polygons)) return { ok: false, error: "Datos no válidos." };
+  try {
+    const r = await importHailpoint(region, input);
+    await supabase.from("audit_logs").insert({ actor: profile.id, action: "importar", entity: "hailpoint", entity_id: input.id, details: { region: region.key, date: input.date, ...r } });
+    revalidatePath("/tormentas"); revalidatePath("/mapa");
+    return { ok: true, ...r };
+  } catch (e) {
+    return { ok: false, error: `No se pudo guardar el mapa ${input.date}: ${(e as Error).message}` };
   }
 }

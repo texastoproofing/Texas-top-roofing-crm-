@@ -175,3 +175,66 @@ export async function importNexrad(region: Region, from: string, to: string) {
   }
   return { detections: dets.length, swaths: swaths.length, stats: stats.length, days: dates.length };
 }
+
+// ---------------- HailPoint (mapas por ciudad, polígonos por rango de tamaño) ----------------
+// Cada polígono trae una etiqueta como '1.75-2"'; se usa el límite inferior.
+export type HpPolygon = { label: string; pts: [number, number][] };
+export const hpLower = (label: string) => { const m = label.match(/([\d.]+)/); return m ? Number(m[1]) : NaN; };
+
+export async function importHailpoint(region: Region, map: { id: string; date: string; polygons: HpPolygon[] }) {
+  const [s, w, n, e] = region.bbox;
+  const polys = map.polygons
+    .map((p) => ({ min: hpLower(p.label), pts: p.pts.filter((q) => Number.isFinite(q[0]) && Number.isFinite(q[1])) }))
+    .filter((p) => Number.isFinite(p.min) && p.min >= 1 && p.pts.length >= 3)
+    .map((p) => {
+      const la = p.pts.map((q) => q[0]), lo = p.pts.map((q) => q[1]);
+      return { ...p, bbox: [Math.min(...la), Math.min(...lo), Math.max(...la), Math.max(...lo)] };
+    })
+    .filter((p) => p.bbox[2] >= s && p.bbox[0] <= n && p.bbox[3] >= w && p.bbox[1] <= e);
+
+  const admin = createAdminClient();
+  const { data: zipsData } = await admin.from("zip_boundaries").select("zip, geom, bbox").not("geom", "is", null);
+  const zips = ((zipsData ?? []) as any[]).filter((z) => { const la = (z.bbox[0] + z.bbox[2]) / 2, lo = (z.bbox[1] + z.bbox[3]) / 2; return la >= s && la <= n && lo >= w && lo <= e; });
+
+  const close = (r: [number, number][]) => { const c = r.map((q) => [Math.round(q[0] * 10000) / 10000, Math.round(q[1] * 10000) / 10000] as [number, number]); const a = c[0], b = c[c.length - 1]; if (a[0] !== b[0] || a[1] !== b[1]) c.push(a); return c; };
+  const swaths = polys.filter((p) => p.min >= 1.75).map((p, i) => ({
+    source_key: "hailpoint", event_date: map.date, min_hail_in: p.min, geom: close(p.pts), bbox: p.bbox, external_id: `${region.key}|${map.id}|${i}`,
+  }));
+
+  const stats: any[] = [];
+  for (const z of zips) {
+    const b = z.bbox;
+    const near = polys.filter((p) => p.bbox[2] >= b[0] && p.bbox[0] <= b[2] && p.bbox[3] >= b[1] && p.bbox[1] <= b[3]);
+    if (!near.length) continue;
+    let total = 0, c1 = 0, c175 = 0, c25 = 0, mx = 0;
+    for (let la = b[0] + 0.0025; la < b[2]; la += 0.005) for (let lo = b[1] + 0.0025; lo < b[3]; lo += 0.005) {
+      if (!pointInRing(la, lo, z.geom)) continue;
+      total++;
+      let best = 0;
+      for (const p of near) if (p.min > best && la >= p.bbox[0] && la <= p.bbox[2] && lo >= p.bbox[1] && lo <= p.bbox[3] && pointInRing(la, lo, p.pts)) best = p.min;
+      if (best >= 1) c1++; if (best >= 1.75) c175++; if (best >= 2.5) c25++;
+      if (best > mx) mx = best;
+    }
+    if (!total || mx < 1) continue;
+    const r4 = (x: number) => Math.round((x / total) * 10000) / 10000;
+    stats.push({ zip: z.zip, event_date: map.date, source_key: "hailpoint", max_hail_in: mx, frac_1: r4(c1), frac_175: r4(c175), frac_25: r4(c25) });
+  }
+
+  // HailPoint reemplaza al radar NEXRAD en esas fechas (±1 día) para no contar dos veces la misma tormenta
+  const days = [-1, 0, 1].map((k) => { const x = new Date(map.date + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + k); return x.toISOString().slice(0, 10); });
+  const zipList = zips.map((z) => z.zip);
+  if (zipList.length) await admin.from("zip_hail_stats").delete().eq("source_key", "nexrad").in("event_date", days).in("zip", zipList);
+  const { data: nx } = await admin.from("storm_swaths").select("id, bbox").eq("source_key", "nexrad").in("event_date", days);
+  const nxIds = ((nx ?? []) as any[]).filter((x) => { const la = (x.bbox[0] + x.bbox[2]) / 2, lo = (x.bbox[1] + x.bbox[3]) / 2; return la >= s && la <= n && lo >= w && lo <= e; }).map((x) => x.id);
+  for (let i = 0; i < nxIds.length; i += 200) await admin.from("storm_swaths").delete().in("id", nxIds.slice(i, i + 200));
+
+  if (swaths.length) {
+    const { error } = await admin.from("storm_swaths").upsert(swaths, { onConflict: "source_key,external_id" });
+    if (error) throw new Error(error.message);
+  }
+  if (stats.length) {
+    const { error } = await admin.from("zip_hail_stats").upsert(stats, { onConflict: "zip,event_date,source_key" });
+    if (error) throw new Error(error.message);
+  }
+  return { polygons: polys.length, swaths: swaths.length, stats: stats.length };
+}
