@@ -67,15 +67,28 @@ export async function geocodeAddress(input: string): Promise<GeoResult> {
 // ---------------------------------------------------------------------
 type Lines = [number, number][][];
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+// Servidores públicos de Overpass; si uno está ocupado (429/504) se prueba el siguiente
+const OVERPASS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
 const esc = (s: string) => s.replace(/[\\"]/g, "\\$&").replace(/[.*+?^${}()|[\]]/g, "\\\\$&");
 
 async function overpass(query: string) {
-  return fetchJson(OVERPASS, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "data=" + encodeURIComponent(query),
-  }, 30000);
+  let last: unknown;
+  for (const url of OVERPASS) {
+    try {
+      return await fetchJson(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(query),
+      }, 20000);
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last;
 }
 
 function collect(data: any, names: string[]) {

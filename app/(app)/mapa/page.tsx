@@ -7,6 +7,8 @@ import { MapApp, type MapPoint, type MapStreet } from "@/components/map/MapApp";
 import { getRoute } from "./actions";
 
 export const dynamic = "force-dynamic";
+// Las acciones de esta página consultan servicios externos (Census, OpenStreetMap)
+export const maxDuration = 60;
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
@@ -93,7 +95,9 @@ export default async function MapaPage() {
       doors: s.doors_knocked ?? 0, leads: s.leads ?? 0, visits: visitCount.get(s.id) ?? 0,
     };
   });
-  const territoriesPendingGeom = Array.from(new Set(streets.filter((s) => s.geomStatus === "pendiente").map((s) => s.territoryId)));
+  const territoriesPendingGeom = Array.from(new Set(
+    streets.filter((s) => s.geomStatus === "pendiente" || s.geomStatus === "error").map((s) => s.territoryId),
+  ));
 
   return (
     <MapApp

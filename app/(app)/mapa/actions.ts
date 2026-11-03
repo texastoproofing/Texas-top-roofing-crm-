@@ -129,7 +129,7 @@ export async function loadStreetGeometry(territoryId: string): Promise<R<{ found
   if (!t?.city) return { ok: false, error: "La zona no tiene ciudad." };
   const { data: streets } = await supabase.from("territory_streets")
     .select("id, name, geom_status, geom_updated_at").eq("territory_id", territoryId);
-  const retryAfter = Date.now() - 24 * 3600 * 1000;
+  const retryAfter = Date.now() - 15 * 60 * 1000; // si OpenStreetMap falló, se reintenta a los 15 min
   const pending = (streets ?? []).filter((s) => s.geom_status === "pendiente"
     || (s.geom_status === "error" && (!s.geom_updated_at || new Date(s.geom_updated_at).getTime() < retryAfter)));
   if (!pending.length) return { ok: true, found: 0, missing: 0 };
