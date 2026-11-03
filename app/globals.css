@@ -31,3 +31,10 @@ body { @apply bg-gray-50 text-gray-900 antialiased; }
 .ttr-pin.ttr-ref { border-color: #facc15; box-shadow: 0 0 0 3px rgba(250,204,21,.45), 0 1px 4px rgba(0,0,0,.45); font-size: 15px; }
 .ttr-pin.ttr-sel { outline: 3px solid #111827; outline-offset: 2px; }
 .leaflet-container { font: inherit; }
+
+/* Impresión / PDF de Storm Intelligence */
+@media print {
+  aside, header, nav { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  .card { break-inside: avoid; }
+}

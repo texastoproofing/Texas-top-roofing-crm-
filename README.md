@@ -18,6 +18,7 @@ Tecnología: Next.js 14 + Supabase (base de datos, usuarios y seguridad) + Verce
 | Usuarios | Solo administrador: crear usuarios con contraseña temporal, cambiar rol, desactivar |
 | Fotos y documentos | En cada trabajo: tomar fotos con la cámara, subir varias fotos, PDF, Word y Excel (máx. 25 MB). Categorías: techo, estimado de la aseguradora, contrato, reporte de medidas y otros. Miniaturas, vista previa, descarga, descripción por foto, eliminar con confirmación y resumen de lo cargado |
 | Mapa | Leads y clientes por dirección, con colores por estado y ★ en firmados/en proceso/terminados; calles del territorio pintadas según visitas; filtros por vendedor, estado, zona y última visita; búsqueda; lista sincronizada; “Por revisar” para direcciones sin ubicación; Ruta del día guardada por vendedor y fecha con salida por GPS o dirección y enlaces a Google/Apple Maps; referencias cercanas con autorización del cliente |
+| Tormentas (Storm Intelligence) | Panel, mapa con capas (franjas de radar HailPoint, reportes NOAA/SPC de granizo y viento, ZIP con puntaje, leads, territorios), ranking de ZIP con Storm Opportunity Score explicado, exposición de cada lead, eventos, alertas sin duplicados, asignación de ZIP a vendedores, CSV y PDF (imprimir) |
 | Importar Trello | Solo administrador: sube el JSON del tablero y crea contactos + trabajos |
 
 Workflow (agrupado como en JobNimbus):
@@ -46,6 +47,7 @@ Listas de Trello → estado: COSTUMER → Lead nuevo · INSPECTION SCHEDULED →
 3. Nueva query: pega `supabase/migrations/0002_territorios.sql` → **Run** (carga las 10 zonas y 198 calles).
    Nueva query: pega `supabase/migrations/0003_archivos.sql` → **Run** (crea el almacenamiento privado `job-files` para fotos y documentos).
    Nueva query: pega `supabase/migrations/0004_mapa.sql` → **Run** (ubicaciones, visitas a calles, rutas y referencias).
+   Nueva query: pega `supabase/migrations/0005_tormentas.sql` y luego `0006_tormentas_datos.sql` → **Run** (módulo de tormentas y datos HailPoint/NOAA iniciales).
 4. **Authentication → Sign In / Providers → Email**: deja Email activado y **desactiva “Allow new users to sign up”** (los usuarios los crea el administrador desde el CRM).
 5. **Authentication → Users → Add user → Create new user**: tu correo y contraseña, marca *Auto Confirm User*. Este primer usuario queda como **administrador**.
 6. **Project Settings → API**: copia `Project URL`, la llave `anon public` y la llave `service_role`.
@@ -96,6 +98,13 @@ Los datos de los clientes viven solo en tu proyecto de Supabase. **No** se guard
 - **Ruta del día:** orden manual. “Ordenar por cercanía” es aproximado en línea recta y no es una ruta optimizada por calles. La navegación se abre en Google Maps (hasta 10 paradas por enlace) o Apple Maps (una parada a la vez).
 - **Referencias:** el mapa marca con ★ los trabajos con contrato firmado, en proceso o terminados. Nombre y dirección de un cliente solo se muestran a otros vendedores si en su trabajo se marcó “El cliente autorizó usar su trabajo como referencia” (apagado por defecto).
 - **Visitas a calles:** registrar un tramo deja la calle “en progreso”; solo se marca terminada si el usuario lo elige.
+
+### Storm Intelligence
+- **Fuentes:** NOAA/SPC (reportes preliminares de granizo y viento, gratis, sin clave; se actualiza solo al abrir Tormentas, cada 6 h como máximo, y el historial desde 2024-01-01 se importa en Tormentas → Ajustes); reportes NWS/NOAA compilados; HailPoint (franjas y % de ZIP por radar, **estimado**, cargado de la investigación inicial); contornos ZCTA del Censo.
+- **Observado vs. estimado vs. comercial:** cada dato muestra su fuente. El mapa nunca dice que una casa tiene daño; “Daño documentado” solo aparece cuando el trabajo tiene un reclamo aprobado.
+- **Storm Opportunity Score:** pesos editables (Ajustes). Se muestran por separado exposición, oportunidad comercial, prioridad combinada y confianza, con explicación.
+- **Pruebas:** `npm test` (geometría, lector de SPC, puntaje y exposición de leads).
+- **Pendiente:** asistente de IA (requiere API de Anthropic, de pago por uso), dibujar polígonos de territorio, optimización de rutas por calles (API de pago), actualización automática de HailPoint (no tiene API pública).
 
 ## Próximas etapas
 2. **Seguros:** suplementos línea por línea, cartas.
