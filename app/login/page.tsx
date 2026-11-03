@@ -15,12 +15,14 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
         </div>
         <p className="text-xs text-white/40">Austin · San Antonio</p>
       </section>
-      <section className="flex items-center justify-center px-4 py-10">
-        <form action={login} className="w-full max-w-sm space-y-5">
-          <div className="lg:hidden text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Texas Top Roofing" width={656} height={508} className="mx-auto w-40 h-auto" />
-          </div>
+      <section className="flex flex-col lg:items-center lg:justify-center lg:px-4 lg:py-10">
+        <div className="lg:hidden relative overflow-hidden bg-gradient-to-br from-night via-night-2 to-[#3a0d10] px-6 pt-[calc(env(safe-area-inset-top)+40px)] pb-14 text-center">
+          <div className="pointer-events-none absolute -right-12 -top-12 w-48 h-48 rounded-full bg-brand/30 blur-2xl" aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-light.png" alt="Texas Top Roofing" width={656} height={508} className="relative mx-auto w-36 h-auto" />
+          <p className="relative mt-3 text-sm text-white/70">Leads, seguro, producción y calles en un solo lugar.</p>
+        </div>
+        <form action={login} className="w-full max-w-sm mx-auto space-y-5 bg-white lg:bg-transparent rounded-t-3xl -mt-6 lg:mt-0 relative px-5 pt-7 pb-10 lg:p-0">
           <div>
             <h1 className="h1">Entrar al CRM</h1>
             <p className="muted mt-1">Usa el correo y la contraseña que te dio el administrador.</p>
