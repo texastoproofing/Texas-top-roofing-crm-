@@ -21,6 +21,7 @@ export const NAV: Group[] = [
   { title: "Ventas & CRM", items: [
     { href: "/trabajos", label: "Trabajos", icon: "jobs", hint: "Leads, seguro, vendidos y producción" },
     { href: "/contactos", label: "Contactos", icon: "contacts" },
+    { href: "/rendimiento", label: "Rendimiento de ventas", icon: "trophy", hint: "Ranking, metas y comisiones" },
   ] },
   { title: "Operaciones en campo", items: [
     { href: "/mapa", label: "Mapa", icon: "pin" },
@@ -291,7 +292,7 @@ export function MobileHeader({ user }: { user: ShellUser }) {
 
 const MENU_TONE: Record<string, string> = {
   "/": "bg-brand-soft text-brand", "/calendario": "bg-sky-50 text-sky-600", "/tareas": "bg-green-50 text-green-600",
-  "/trabajos": "bg-night text-white", "/contactos": "bg-violet-50 text-violet-600", "/mapa": "bg-brand-soft text-brand",
+  "/trabajos": "bg-night text-white", "/contactos": "bg-violet-50 text-violet-600", "/rendimiento": "bg-amber-50 text-amber-600", "/mapa": "bg-brand-soft text-brand",
   "/territorios": "bg-amber-50 text-amber-600", "/tormentas": "bg-sky-50 text-sky-700", "/usuarios": "bg-canvas text-ink/70", "/importar": "bg-canvas text-ink/70",
 };
 

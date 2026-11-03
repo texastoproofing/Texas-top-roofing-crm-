@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-strip-types --test tests/storm.test.ts tests/street-intel.test.ts"
+    "test": "node --experimental-strip-types --test tests/storm.test.ts tests/street-intel.test.ts tests/sales.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.5.2",
