@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getSession, isStaff, listProfiles } from "@/lib/auth";
 import { STAGES, STATUSES, apptLabel, statusInfo, type StageKey } from "@/lib/constants";
 import { firstName, fmtDate, fmtDateTime, fmtMoney, fmtTime, localToISO, todayTX } from "@/lib/format";
-import { EmptyInline, ProgressBar, STAGE_TONE, Section, Stat, StatusBadge } from "@/components/ui";
+import { Avatar, EmptyInline, ProgressBar, Section, StatusBadge } from "@/components/ui";
+import { QuickButtons } from "@/components/Nav";
 import { Icon } from "@/components/icons";
 
 // Estados (ya existentes) que cuentan como reclamo aprobado y como contrato firmado. No se mezclan.
@@ -37,7 +38,6 @@ export default async function Dashboard() {
 
   const appts = (apptRes.data ?? []) as any[];
   const mineAppts = (staff ? appts : appts.filter((a) => a.assigned_to === profile.id)).slice(0, 5);
-  const todayCount = appts.filter((a) => new Date(a.starts_at).getTime() < new Date(start).getTime() + 86400000 && (staff || a.assigned_to === profile.id)).length;
 
   const streets = (streetsRes.data ?? []) as any[];
   const doneStreets = streets.filter((s) => s.status === "terminada").length;
@@ -61,108 +61,177 @@ export default async function Dashboard() {
   }).filter((r) => r.total > 0).sort((a, b) => b.signed - a.signed || b.approved - a.approved || b.total - a.total).slice(0, 5) : [];
 
   const name = firstName(profile.full_name);
-  const dateLabel = new Date(today + "T12:00:00Z").toLocaleDateString("es-US", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-  const maxStage = Math.max(1, ...byStage.map((s) => s.n));
   const now = Date.now();
+  const dayEnd = new Date(start).getTime() + 86400000;
+  const todays = appts.filter((a) => new Date(a.starts_at).getTime() < dayEnd && (staff || a.assigned_to === profile.id));
+  const upcoming = todays.length ? todays : mineAppts;
+  const pipe = byStage.filter((s) => s.key !== "perdido" && s.n > 0);
+  const pipeTotal = pipe.reduce((a, s) => a + s.n, 0);
+  const repsMoney = staff ? users.filter((u) => u.active).map((u) => {
+    const mine = jobs.filter((j) => j.sales_rep_id === u.id && [...APPROVED, ...SIGNED].includes(j.status));
+    return { id: u.id, money: mine.reduce((a, j) => a + Number(j.approved_amount ?? 0), 0) };
+  }) : [];
+  const moneyOf = (id: string) => repsMoney.find((r) => r.id === id)?.money ?? 0;
+  const topMoney = Math.max(1, ...reps.map((r) => moneyOf(r.id)), ...reps.map((r) => r.signed));
+
+  const KPI = [
+    { k: "lead" as StageKey, label: "Leads", icon: "contacts", tile: "bg-brand-soft text-brand" },
+    { k: "seguro" as StageKey, label: "Seguro / Estimado", icon: "file", tile: "bg-sky-50 text-sky-600" },
+    { k: "vendido" as StageKey, label: "Vendidos", icon: "check", tile: "bg-green-50 text-green-600" },
+    { k: "produccion" as StageKey, label: "Producción", icon: "hammer", tile: "bg-amber-50 text-amber-600" },
+  ];
 
   return (
     <div className="space-y-5">
       {/* Saludo */}
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow capitalize">{dateLabel}</p>
-          <h1 className="h1 mt-0.5">{name ? `Hola, ${name}` : "Hola"}</h1>
-          <p className="muted mt-0.5">
-            {todayCount ? `${todayCount} cita${todayCount === 1 ? "" : "s"} hoy` : "Sin citas hoy"} · {(tasksRes.data ?? []).length ? `${(tasksRes.data ?? []).length} tarea(s) pendiente(s)` : "sin tareas pendientes"}
-          </p>
-        </div>
-        <Link href="/trabajos/nuevo" className="btn-primary hidden sm:inline-flex"><Icon name="plus" className="w-4 h-4" />Nuevo lead</Link>
+      <div>
+        <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight">{name ? `¡Hola, ${name}!` : "¡Hola!"} <span aria-hidden>👋</span></h1>
+        <p className="muted mt-0.5"><span className="hidden sm:inline">Resumen general de Texas Top Roofing · </span><span className="capitalize">{new Date(today + "T12:00:00Z").toLocaleDateString("es-US", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}</span></p>
       </div>
 
-      {/* KPIs: 2 visibles en móvil, el resto expandible */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Stat label="Leads activos" value={n("lead")} icon="inbox" href="/trabajos?etapa=lead" tone="dark" />
-        <Stat label="Vendidos" value={n("vendido")} icon="check" href="/trabajos?etapa=vendido" tone="brand" />
-        <div className="hidden lg:block"><Stat label="Seguro / Estimado" value={n("seguro")} icon="shield" href="/trabajos?etapa=seguro" /></div>
-        <div className="hidden lg:block"><Stat label="En producción" value={n("produccion")} icon="hammer" href="/trabajos?etapa=produccion" /></div>
-        {staff
-          ? <div className="hidden lg:block"><Stat label="Monto aprobado" value={fmtMoney(approvedSum)} icon="dollar" hint="Trabajos aprobados o firmados" /></div>
-          : <div className="hidden lg:block"><Stat label="Cobro" value={n("cobro")} icon="dollar" href="/trabajos?etapa=cobro" /></div>}
-      </div>
-      <details className="lg:hidden -mt-2 group">
-        <summary className="list-none cursor-pointer text-sm font-medium text-muted flex items-center gap-1">
-          <Icon name="chevronDown" className="w-4 h-4 transition group-open:rotate-180" />Más indicadores
-        </summary>
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <Stat label="Seguro / Estimado" value={n("seguro")} icon="shield" href="/trabajos?etapa=seguro" />
-          <Stat label="En producción" value={n("produccion")} icon="hammer" href="/trabajos?etapa=produccion" />
-          <Stat label="Cobro" value={n("cobro")} icon="dollar" href="/trabajos?etapa=cobro" />
-          {staff && <Stat label="Monto aprobado" value={fmtMoney(approvedSum)} icon="dollar" hint="Aprobados o firmados" />}
-        </div>
-      </details>
-
-      {/* Acciones rápidas (móvil) */}
-      <div className="lg:hidden grid grid-cols-4 gap-2">
-        {[
-          { href: "/trabajos/nuevo", icon: "plus", l: "Lead" },
-          { href: "/calendario?nueva=inspeccion", icon: "calendar", l: "Inspección" },
-          { href: "/tareas?nueva=1", icon: "tasks", l: "Tarea" },
-          { href: last?.territory?.id ? `/territorios/${last.territory.id}` : "/territorios", icon: "door", l: "Visita" },
-        ].map((a) => (
-          <Link key={a.l} href={a.href} className="card flex flex-col items-center gap-1 py-3 text-xs font-medium active:bg-canvas">
-            <span className="w-9 h-9 rounded-lg bg-brand-soft text-brand flex items-center justify-center"><Icon name={a.icon} className="w-5 h-5" /></span>{a.l}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        {KPI.map((x) => (
+          <Link key={x.k} href={`/trabajos?etapa=${x.k}`} className="card p-3 lg:p-5 flex items-center lg:items-start gap-3 lg:gap-4 hover:shadow-pop transition">
+            <span className={`w-10 h-10 lg:w-14 lg:h-14 shrink-0 rounded-xl flex items-center justify-center ${x.tile}`}><Icon name={x.icon} className="w-5 h-5 lg:w-7 lg:h-7" /></span>
+            <span className="min-w-0">
+              <span className="hidden lg:block text-sm font-medium text-ink/80">{x.label}</span>
+              <span className="block text-xl lg:text-3xl font-bold tnum leading-tight">{n(x.k)}</span>
+              <span className="lg:hidden block text-xs text-muted truncate">{x.label}</span>
+            </span>
           </Link>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
-        {/* Pipeline */}
-        <Section title="Pipeline" action={<Link href="/trabajos" className="link">Ver trabajos</Link>} className="lg:col-span-2">
-          <ul className="space-y-2.5">
-            {byStage.filter((s) => s.key !== "perdido").map((s) => (
-              <li key={s.key}>
-                <Link href={`/trabajos?etapa=${s.key}`} className="grid grid-cols-[120px_1fr_36px] sm:grid-cols-[150px_1fr_40px] items-center gap-3 text-sm group">
-                  <span className="flex items-center gap-2 text-ink/80 group-hover:text-ink"><span className={`w-2 h-2 rounded-full ${STAGE_TONE[s.key].dot}`} />{s.label}</span>
-                  <span className="h-2.5 rounded-full bg-canvas overflow-hidden"><span className={`block h-full rounded-full ${STAGE_TONE[s.key].bar}`} style={{ width: `${(100 * s.n) / maxStage}%` }} /></span>
-                  <span className="text-right font-semibold tnum">{s.n}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted mt-3">{n("perdido")} perdido(s) no se muestran.</p>
-        </Section>
+      {/* Acciones rápidas (móvil) */}
+      <div className="lg:hidden">
+        <h2 className="h2 mb-2">Acciones rápidas</h2>
+        <QuickButtons />
+      </div>
 
-        {/* Ranking o mis citas */}
-        {staff ? (
-          <Section title="Equipo" action={<Link href="/tormentas" className="link">Rendimiento</Link>}>
-            {reps.length === 0 ? <EmptyInline>Sin trabajos asignados a vendedores.</EmptyInline> : (
-              <ol className="space-y-2">
-                {reps.map((r, i) => (
-                  <li key={r.id} className="flex items-center gap-3 text-sm">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${i === 0 ? "bg-brand text-white" : "bg-canvas text-ink/70"}`}>{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
-                    <span className="text-xs text-muted tnum" title="Firmados · aprobados · leads">{r.signed} firm. · {r.approved} aprob. · {r.leads} leads</span>
+      <div className="grid lg:grid-cols-2 gap-5">
+        {/* Pipeline (dona) */}
+        <Section title="Pipeline de ventas" action={<Link href="/trabajos" className="link">Ver pipeline →</Link>} className="order-5 lg:order-none">
+          {pipeTotal === 0 ? <EmptyInline>No hay trabajos todavía.</EmptyInline> : (
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <Donut parts={pipe.map((s) => ({ v: s.n, color: STAGE_HEX[s.key] }))} total={pipeTotal} label="Trabajos" />
+              <ul className="w-full space-y-2">
+                {pipe.map((s) => (
+                  <li key={s.key}>
+                    <Link href={`/trabajos?etapa=${s.key}`} className="flex items-center gap-2 text-sm hover:text-ink">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: STAGE_HEX[s.key] }} />
+                      <span className="flex-1 text-ink/80">{s.label}</span>
+                      <span className="font-semibold tnum">{s.n}</span>
+                      <span className="w-12 text-right text-muted tnum">({Math.round((100 * s.n) / pipeTotal)}%)</span>
+                    </Link>
                   </li>
                 ))}
+              </ul>
+            </div>
+          )}
+        </Section>
+
+        {/* Rendimiento del equipo (solo staff) */}
+        {staff && (
+          <Section title="Rendimiento del equipo" action={<Link href="/tormentas" className="link">Ver ranking →</Link>} className="order-6 lg:order-none">
+            {reps.length === 0 ? <EmptyInline>Sin trabajos asignados a vendedores.</EmptyInline> : (
+              <ol className="divide-y divide-line/70">
+                {reps.map((r, i) => {
+                  const m = moneyOf(r.id);
+                  const val = repsMoney.some((x) => x.money > 0) ? m : r.signed;
+                  return (
+                    <li key={r.id} className="flex items-center gap-3 py-2.5">
+                      <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${["bg-amber-100 text-amber-700", "bg-gray-100 text-gray-600", "bg-orange-100 text-orange-700"][i] ?? "bg-canvas text-muted"}`}>{i + 1}</span>
+                      <Avatar name={r.name} className="w-9 h-9 text-xs" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold truncate">{r.name}</span>
+                        <span className="block text-xs text-muted">{r.signed} firmado(s) · {r.approved} aprobado(s){m > 0 ? ` · ${fmtMoney(m)}` : ""}</span>
+                      </span>
+                      <span className="hidden sm:block w-28"><ProgressBar value={val} max={topMoney} label={`Rendimiento de ${r.name}`} /></span>
+                    </li>
+                  );
+                })}
               </ol>
             )}
-            <p className="text-xs text-muted mt-3">Firmado = contrato firmado o posterior. Aprobado = reclamo aprobado o posterior.</p>
+            <p className="text-xs text-muted mt-2">Firmado = contrato firmado o posterior. Aprobado = reclamo aprobado o posterior. Monto = aprobado en esos trabajos.</p>
           </Section>
-        ) : (
-          <ApptCard appts={mineAppts} />
         )}
+      </div>
 
-        {staff && <ApptCard appts={mineAppts} />}
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Citas de hoy */}
+        <Section title={<>{todays.length ? "Citas de hoy" : "Próximas citas"} <span className="text-muted font-normal">({upcoming.length})</span></>} action={<Link href="/calendario" className="link">Ver agenda →</Link>} className="order-1 lg:order-none">
+          {upcoming.length === 0 ? <EmptyInline action={<Link href="/calendario?nueva=inspeccion" className="link">+ Cita</Link>}>Sin citas en los próximos 7 días.</EmptyInline> : (
+            <ul className="space-y-2">
+              {upcoming.map((a) => {
+                const tone = APPT_TONE[a.kind] ?? APPT_TONE.otra;
+                return (
+                  <li key={a.id} className="flex items-center gap-3 rounded-lg border border-line p-2 pl-0 overflow-hidden">
+                    <span className={`self-stretch w-1 rounded-r ${tone.bar}`} aria-hidden />
+                    <span className="shrink-0 rounded-md bg-canvas px-2 py-1 text-xs font-semibold tnum">{todays.length ? fmtTime(a.starts_at) : `${new Date(a.starts_at).toLocaleDateString("es-US", { weekday: "short", timeZone: "America/Chicago" })} ${fmtTime(a.starts_at)}`}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold truncate">{a.job_id ? <Link href={`/trabajos/${a.job_id}`}>{a.title}</Link> : a.title}</span>
+                      {a.location && <span className="block text-xs text-muted truncate">{a.location}</span>}
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${tone.chip}`}>{apptLabel(a.kind)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Section>
+
+        {/* Door-to-door */}
+        <Section title="Door-to-Door (Calles)" action={<Link href="/territorios" className="link">Ver calles →</Link>} className="order-2 lg:order-none">
+          {streets.length === 0 ? <EmptyInline>No hay calles cargadas.</EmptyInline> : (
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-ink/80">{doneStreets} de {streets.length} calles terminadas</span>
+                  <span className="font-semibold tnum">{Math.round((100 * doneStreets) / streets.length)}%</span>
+                </div>
+                <ProgressBar value={doneStreets} max={streets.length} label="Calles terminadas" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border border-line py-2.5"><Icon name="pin" className="w-5 h-5 mx-auto text-brand" /><div className="text-lg font-bold tnum">{streets.length}</div><div className="text-[11px] text-muted">Calles</div></div>
+                <div className="rounded-lg border border-line py-2.5"><Icon name="check" className="w-5 h-5 mx-auto text-green-600" /><div className="text-lg font-bold tnum">{doneStreets}</div><div className="text-[11px] text-muted">Terminadas</div></div>
+                <div className="rounded-lg border border-line py-2.5"><Icon name="clock" className="w-5 h-5 mx-auto text-amber-500" /><div className="text-lg font-bold tnum">{streets.length - doneStreets}</div><div className="text-[11px] text-muted">Pendientes</div></div>
+              </div>
+              <Link href={last?.territory?.id ? `/territorios/${last.territory.id}` : "/territorios"} className="btn-primary w-full">
+                <Icon name="arrowRight" className="w-4 h-4" />{last ? "Continuar recorrido" : "Empezar recorrido"}
+              </Link>
+              {last && <p className="text-xs text-muted text-center -mt-1">Última: {last.name} · Zona {last.territory?.code} · {fmtDate(last.last_visit_at)}{progStreets ? ` · ${progStreets} en progreso` : ""}</p>}
+            </div>
+          )}
+        </Section>
+
+        {/* Actividad */}
+        <Section title="Actividad reciente" className="order-7 lg:order-none">
+          {(actRes.data ?? []).length === 0 ? <EmptyInline>Todavía no hay actividad.</EmptyInline> : (
+            <ul className="space-y-3">
+              {actRes.data!.map((a: any) => (
+                <li key={a.id} className="flex gap-3 text-sm">
+                  <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center ${ACT_TONE[a.kind] ?? "bg-canvas text-muted"}`}><Icon name={ACT_ICON[a.kind] ?? "activity"} className="w-4 h-4" /></span>
+                  <span className="min-w-0">
+                    <span className="block font-medium truncate">{a.job ? <Link href={`/trabajos/${a.job_id}`}>{a.job.name}</Link> : "General"}</span>
+                    <span className="block text-xs text-muted line-clamp-2">{renderAct(a)}</span>
+                    <span className="block text-[11px] text-muted/80">{a.author?.full_name ? `${a.author.full_name} · ` : ""}{fmtDateTime(a.created_at)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
 
         {/* Mis tareas */}
-        <Section title="Mis tareas" action={<Link href="/tareas" className="link">Ver todas</Link>}>
+        <Section title="Mis tareas" action={<Link href="/tareas" className="link">Ver todas →</Link>} className="order-3 lg:order-none">
           {(tasksRes.data ?? []).length === 0 ? <EmptyInline action={<Link href="/tareas?nueva=1" className="link">+ Tarea</Link>}>Sin tareas pendientes.</EmptyInline> : (
             <ul className="divide-y divide-line/70">
               {tasksRes.data!.map((t) => {
                 const late = t.due_at && new Date(t.due_at).getTime() < now;
                 return (
                   <li key={t.id} className="py-2.5 flex items-start gap-2.5">
-                    <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${late ? "bg-red-600" : "bg-line"}`} aria-hidden />
+                    <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${late ? "bg-red-600" : "bg-line"}`} aria-hidden />
                     <div className="min-w-0">
                       <div className="font-medium text-sm truncate">{t.job_id ? <Link href={`/trabajos/${t.job_id}`}>{t.title}</Link> : t.title}</div>
                       {t.due_at && <div className={`text-xs ${late ? "text-red-600 font-medium" : "text-muted"}`}>{late ? "Vencida · " : ""}{fmtDateTime(t.due_at)}</div>}
@@ -174,30 +243,8 @@ export default async function Dashboard() {
           )}
         </Section>
 
-        {/* Door-to-door */}
-        <Section title="Door-to-door" action={<Link href="/territorios" className="link">Calles</Link>}>
-          {streets.length === 0 ? <EmptyInline>No hay calles cargadas.</EmptyInline> : (
-            <div className="space-y-3">
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-semibold tnum">{doneStreets}<span className="text-base text-muted font-normal"> / {streets.length}</span></span>
-                <span className="text-xs text-muted">{progStreets} en progreso</span>
-              </div>
-              <ProgressBar value={doneStreets} max={streets.length} label="Calles terminadas" />
-              {last ? (
-                <Link href={`/territorios/${last.territory?.id}`} className="flex items-center justify-between gap-3 rounded-lg bg-canvas px-3 py-2.5 hover:bg-line/50">
-                  <span className="min-w-0">
-                    <span className="block text-xs text-muted">Última calle trabajada · {fmtDate(last.last_visit_at)}</span>
-                    <span className="block text-sm font-medium truncate">{last.name} · Zona {last.territory?.code}</span>
-                  </span>
-                  <span className="btn-dark btn-sm shrink-0">Continuar</span>
-                </Link>
-              ) : <p className="text-xs text-muted">Todavía no hay visitas registradas.</p>}
-            </div>
-          )}
-        </Section>
-
         {/* Requieren atención */}
-        <Section title="Requieren atención" className="lg:col-span-2" action={<span className="text-xs text-muted">Sin cambio de estado en 14+ días</span>}>
+        <Section title="Requieren atención" className="lg:col-span-2 order-4 lg:order-none" action={<span className="text-xs text-muted">Sin cambio en 14+ días</span>}>
           {stale.length === 0 ? <EmptyInline>Todo al día.</EmptyInline> : (
             <ul className="divide-y divide-line/70">
               {stale.map((j) => (
@@ -214,25 +261,44 @@ export default async function Dashboard() {
             </ul>
           )}
         </Section>
-
-        {/* Actividad */}
-        <Section title="Actividad reciente">
-          {(actRes.data ?? []).length === 0 ? <EmptyInline>Todavía no hay actividad.</EmptyInline> : (
-            <ul className="space-y-3">
-              {actRes.data!.map((a: any) => (
-                <li key={a.id} className="text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="font-medium truncate">{a.job ? <Link href={`/trabajos/${a.job_id}`}>#{a.job.number} {a.job.name}</Link> : "General"}</span>
-                    <span className="text-xs text-muted shrink-0">{fmtDateTime(a.created_at)}</span>
-                  </div>
-                  <div className="text-muted line-clamp-2">{a.author?.full_name ? `${a.author.full_name}: ` : ""}{renderAct(a)}</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
       </div>
     </div>
+  );
+}
+
+const STAGE_HEX: Record<StageKey, string> = {
+  lead: "#0EA5E9", seguro: "#F59E0B", vendido: "#16A34A", produccion: "#8B5CF6", cobro: "#F97316", completado: "#15803D", perdido: "#9CA3AF",
+};
+const APPT_TONE: Record<string, { bar: string; chip: string }> = {
+  inspeccion: { bar: "bg-brand", chip: "bg-brand-soft text-brand" },
+  ajustador: { bar: "bg-sky-500", chip: "bg-sky-50 text-sky-700" },
+  firma: { bar: "bg-green-600", chip: "bg-green-50 text-green-700" },
+  instalacion: { bar: "bg-violet-500", chip: "bg-violet-50 text-violet-700" },
+  seguimiento: { bar: "bg-amber-500", chip: "bg-amber-50 text-amber-700" },
+  otra: { bar: "bg-gray-400", chip: "bg-canvas text-ink/70" },
+};
+const ACT_ICON: Record<string, string> = { nota: "note", llamada: "phone", visita: "door", cambio_estado: "check", sistema: "activity" };
+const ACT_TONE: Record<string, string> = {
+  nota: "bg-sky-50 text-sky-600", llamada: "bg-amber-50 text-amber-600", visita: "bg-violet-50 text-violet-600",
+  cambio_estado: "bg-green-50 text-green-600", sistema: "bg-canvas text-muted",
+};
+
+// Dona SVG sin librerías
+function Donut({ parts, total, label }: { parts: { v: number; color: string }[]; total: number; label: string }) {
+  const r = 52, c = 2 * Math.PI * r;
+  let off = 0;
+  return (
+    <svg viewBox="0 0 140 140" className="w-40 h-40 shrink-0" role="img" aria-label={`${total} ${label}`}>
+      <circle cx="70" cy="70" r={r} fill="none" stroke="#F6F7F9" strokeWidth="22" />
+      {parts.map((p, i) => {
+        const len = (p.v / total) * c;
+        const el = <circle key={i} cx="70" cy="70" r={r} fill="none" stroke={p.color} strokeWidth="22" strokeDasharray={`${Math.max(0, len - 1.5)} ${c}`} strokeDashoffset={-off} transform="rotate(-90 70 70)" />;
+        off += len;
+        return el;
+      })}
+      <text x="70" y="68" textAnchor="middle" className="fill-ink" style={{ font: "700 28px var(--font-inter), sans-serif" }}>{total}</text>
+      <text x="70" y="88" textAnchor="middle" className="fill-muted" style={{ font: "500 12px var(--font-inter), sans-serif" }}>{label}</text>
+    </svg>
   );
 }
 
@@ -242,27 +308,4 @@ function renderAct(a: { kind: string; body: string }) {
     return `${statusInfo(x).label} → ${statusInfo(y ?? "").label}`;
   }
   return a.body;
-}
-
-function ApptCard({ appts }: { appts: any[] }) {
-  return (
-    <Section title="Próximas citas" action={<Link href="/calendario" className="link">Agenda</Link>}>
-      {appts.length === 0 ? <EmptyInline action={<Link href="/calendario?nueva=inspeccion" className="link">+ Cita</Link>}>Sin citas en los próximos 7 días.</EmptyInline> : (
-        <ul className="divide-y divide-line/70">
-          {appts.map((a) => (
-            <li key={a.id} className="py-2.5 flex gap-3">
-              <div className="w-14 shrink-0 text-center">
-                <div className="text-[11px] uppercase text-muted">{new Date(a.starts_at).toLocaleDateString("es-US", { weekday: "short", timeZone: "America/Chicago" })}</div>
-                <div className="text-sm font-semibold tnum">{fmtTime(a.starts_at)}</div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{a.job_id ? <Link href={`/trabajos/${a.job_id}`}>{a.title}</Link> : a.title}</div>
-                <div className="text-xs text-muted truncate">{apptLabel(a.kind)}{a.location ? ` · ${a.location}` : ""}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Section>
-  );
 }
