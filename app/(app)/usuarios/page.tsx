@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { ROLES, roleLabel } from "@/lib/constants";
-import { PageHeader } from "@/components/ui";
+import { Avatar, PageHeader } from "@/components/ui";
 import { createUser, resetPassword, updateUser } from "./actions";
 
 const ERR: Record<string, string> = {
@@ -42,24 +42,28 @@ export default async function UsersPage({ searchParams }: { searchParams: { erro
         </form>
       </details>
 
-      <div className="card p-4 mb-5 text-sm text-gray-700 space-y-1">
+      <div className="card p-4 mb-5 text-sm text-ink/80 space-y-1">
+        <h2 className="h2 mb-1">Qué ve cada rol</h2>
         <p><b>Administrador:</b> todo, incluido borrar y manejar usuarios.</p>
         <p><b>Project manager</b> y <b>Asistente:</b> ven y editan todos los contactos, trabajos, tareas y citas.</p>
         <p><b>Vendedor:</b> solo ve sus propios contactos y trabajos (los que creó o tiene asignados). Todos ven los territorios.</p>
       </div>
 
-      <ul className="space-y-3">
+      <ul className="card divide-y divide-line/70">
         {users.map((u) => (
-          <li key={u.id} className={`card p-4 ${u.active ? "" : "opacity-60"}`}>
-            <div className="flex justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-bold truncate">{u.full_name || u.email}{u.id === profile.id && " (tú)"}</div>
-                <div className="muted truncate">{u.email}</div>
+          <li key={u.id} className={`p-4 ${u.active ? "" : "opacity-60"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={u.full_name || u.email} className="w-9 h-9 text-xs" />
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{u.full_name || u.email}{u.id === profile.id && " (tú)"}</div>
+                  <div className="text-xs text-muted truncate">{u.email}</div>
+                </div>
               </div>
-              <span className="chip bg-gray-100 border-gray-200">{roleLabel(u.role)}{u.active ? "" : " · inactivo"}</span>
+              <span className={`chip ${u.active ? "bg-canvas border-line text-ink/80" : "bg-gray-100 border-gray-200 text-gray-500"}`}>{roleLabel(u.role)}{u.active ? "" : " · inactivo"}</span>
             </div>
-            <details className="mt-2">
-              <summary className="text-sm font-semibold text-gray-600 cursor-pointer">Editar</summary>
+            <details className="mt-2 ml-12">
+              <summary className="text-sm font-medium text-muted cursor-pointer">Editar</summary>
               <form action={updateUser.bind(null, u.id)} className="grid sm:grid-cols-2 gap-3 mt-3">
                 <div><label className="label">Nombre</label><input className="input" name="full_name" defaultValue={u.full_name} /></div>
                 <div><label className="label">Teléfono</label><input className="input" name="phone" defaultValue={u.phone ?? ""} /></div>

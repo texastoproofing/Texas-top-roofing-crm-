@@ -41,3 +41,19 @@ Las "notificaciones" reales que existen son las **alertas de granizo** de Tormen
 4. Trabajos, contactos, agenda, tareas, calles: componentes compartidos (encabezados, tarjetas de lista, badges, estados vacíos, barra de progreso).
 5. Mapa: ajustes de diseño sin tocar la lógica del mapa.
 6. Sin migraciones de base de datos.
+
+## Cambios hechos en la rama `rediseno-ui` (fase 1)
+- **Tokens**: paleta corporativa (#111318, #D71920, #F6F7F9, #17191F, #667085, #E6E8EC), Inter, sombras suaves, foco visible, `prefers-reduced-motion`.
+- **Navegación escritorio**: barra lateral oscura de 256 px / 72 px contraída (se recuerda), grupos General · Ventas · Campo · Administración, botón Nuevo, perfil abajo con contraseña y cerrar sesión, contador de alertas de granizo.
+- **Navegación móvil**: encabezado compacto (logo, campana de alertas, avatar con menú de cuenta; "Salir" ya no está expuesto), barra inferior Inicio · Trabajos · (+) · Mapa · Calles · Más. Se mantuvo Calles como pestaña porque es la tarea diaria del vendedor; Contactos, Agenda, Tareas, Tormentas y administración están en Más.
+- **Acciones rápidas** (hoja inferior): nuevo lead, inspección, cita, tarea, registrar visita, contacto — todas llevan a flujos existentes.
+- **Inicio**: KPIs reales (2 en móvil + "más indicadores"), pipeline por etapa, ranking del equipo (solo staff; firmado y aprobado separados), próximas citas, mis tareas, door-to-door con "Continuar" en la última calle trabajada, trabajos sin cambio en 14+ días, actividad.
+- **Trabajos**: búsqueda con icono, "Solo míos", selector Tablero/Lista, etapas con color; lista = tabla en escritorio y tarjetas en móvil; tablero con columnas más limpias. Estados y transiciones sin cambios.
+- **Trabajo**: cabecera con cliente, acciones Llamar/Mensaje/Ir/Cliente, navegación fija por secciones.
+- **Contactos**: tabla en escritorio; tarjetas con Llamar/Mensaje/Abrir en móvil.
+- **Agenda**: semana compacta por día (sin tarjetas vacías gigantes), "Nueva cita" abre el formulario (y preselecciona inspección desde acciones rápidas).
+- **Tareas**: pestañas segmentadas, vencidas separadas.
+- **Calles**: resumen general, tarjetas con progreso, detalle con progreso de la zona.
+- **Mapa**: la ficha de cliente/calle aparece arriba del listado y la pantalla se desplaza a ella en celular; leyenda al final y plegada.
+- **Login, usuarios, no encontrado**: mismo sistema visual.
+- Sin migraciones de base de datos. Sin cambios de permisos, estados, cálculos ni integraciones.
