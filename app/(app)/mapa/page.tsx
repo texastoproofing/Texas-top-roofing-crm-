@@ -12,7 +12,7 @@ export const maxDuration = 60;
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
-export default async function MapaPage() {
+export default async function MapaPage({ searchParams }: { searchParams: { calle?: string } }) {
   const { supabase, profile } = await getSession();
   const nowIso = new Date().toISOString();
 
@@ -110,6 +110,7 @@ export default async function MapaPage() {
   return (
     <MapApp
       me={profile.id}
+      initialStreet={searchParams.calle && /^[0-9a-f-]{36}$/i.test(searchParams.calle) ? searchParams.calle : null}
       staff={isStaff(profile)}
       points={points}
       streets={streets}
