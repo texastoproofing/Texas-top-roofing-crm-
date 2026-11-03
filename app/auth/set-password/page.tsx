@@ -18,6 +18,8 @@ export default async function SetPasswordPage({ searchParams }: { searchParams: 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <form action={setPassword} className="card w-full max-w-sm p-6 space-y-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-mark.png" alt="Texas Top Roofing" width={256} height={252} className="w-14 h-auto" />
         <h1 className="h1">Cambiar contraseña</h1>
         <p className="muted">{user.email}</p>
         {searchParams.error && (

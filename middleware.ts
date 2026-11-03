@@ -33,5 +33,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)"],
+  // Archivos públicos (logo, íconos, manifest) no pasan por la sesión
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|svg|webp|ico|webmanifest)$).*)"],
 };
