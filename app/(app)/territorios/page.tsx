@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
 import { Empty, PageHeader } from "@/components/ui";
 
+const REGIONS_D2D = [{ key: "austin", name: "Austin" }, { key: "san_antonio", name: "San Antonio" }];
+
 export default async function TerritoriesPage() {
   const { supabase } = await getSession();
   const { data } = await supabase.from("territories")
@@ -15,8 +17,15 @@ export default async function TerritoriesPage() {
       <PageHeader title="Calles door-to-door" sub="Zonas por prioridad dentro de la franja de granizo del radar"
         action={<Link href="/mapa" className="btn-secondary">Ver en el mapa</Link>} />
       {zones.length === 0 ? <Empty>No hay territorios. Corre el archivo supabase/migrations/0002_territorios.sql.</Empty> : (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {zones.map((z) => {
+        <div className="space-y-6">
+          {REGIONS_D2D.map(({ key, name }) => {
+            const list = zones.filter((z) => (String(z.code).startsWith("S") ? "san_antonio" : "austin") === key);
+            if (!list.length) return null;
+            return (
+              <section key={key}>
+                <h2 className="font-bold text-lg mb-2">{name}</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+          {list.map((z) => {
             const st = z.territory_streets as { status: string; doors_knocked: number; leads: number }[];
             const done = st.filter((s) => s.status === "terminada").length;
             const doors = st.reduce((a, s) => a + (s.doors_knocked ?? 0), 0);
@@ -24,11 +33,11 @@ export default async function TerritoriesPage() {
             return (
               <Link key={z.id} href={`/territorios/${z.id}`} className="card p-4 block hover:border-brand">
                 <div className="flex gap-3">
-                  <div className="text-3xl font-bold text-brand w-8">{z.code}</div>
+                  <div className="text-3xl font-bold text-brand w-10 shrink-0">{z.code}</div>
                   <div className="min-w-0 flex-1">
                     <div className="font-bold leading-tight">{z.name}</div>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {z.hail && <span className="chip bg-brand-soft text-brand border-transparent">Radar {z.hail}</span>}
+                      {z.hail && <span className="chip bg-brand-soft text-brand border-transparent">Granizo {z.hail}</span>}
                       <span className="chip bg-gray-100 border-transparent">{z.city} {z.zip}</span>
                       {z.schedule && <span className="chip bg-gray-100 border-transparent">{z.schedule}</span>}
                     </div>
@@ -41,6 +50,10 @@ export default async function TerritoriesPage() {
                   </div>
                 </div>
               </Link>
+            );
+          })}
+        </div>
+              </section>
             );
           })}
         </div>
