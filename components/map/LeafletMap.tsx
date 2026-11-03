@@ -122,7 +122,11 @@ export default function LeafletMap({
         const sty = STREET_STATUS[key] ?? STREET_STATUS.pendiente;
         const sel = street.id === selectedStreetId;
         for (const line of street.lines) {
-          L.polyline(line, { color: sty.color, weight: sel ? 5 : 2.5, opacity: sel ? 1 : 0.8, dashArray: sty.dash, interactive: false }).addTo(streetsLayer);
+          L.polyline(line, {
+            color: sty.color, dashArray: sel ? undefined : sty.dash, interactive: false,
+            // Pendientes: línea punteada muy fina para no tapar el mapa
+            weight: sel ? 5 : key === "pendiente" ? 1 : 2.5, opacity: sel ? 1 : key === "pendiente" ? 0.45 : 0.8,
+          }).addTo(streetsLayer);
           // línea invisible y gruesa para tocar fácil en el teléfono
           L.polyline(line, { color: "#000", weight: 22, opacity: 0 })
             .on("click", (e: any) => { L.DomEvent.stopPropagation(e); if (!cb.current.pickMode) cb.current.onSelectStreet(street.id); })

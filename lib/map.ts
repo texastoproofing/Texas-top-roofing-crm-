@@ -20,7 +20,7 @@ export function mapGroupOf(status: string): MapGroup {
 export const groupInfo = (k: MapGroup) => MAP_GROUPS.find((g) => g.key === k)!;
 
 export const STREET_STATUS: Record<string, { label: string; color: string; dash?: string }> = {
-  pendiente: { label: "Calle pendiente", color: "#9ca3af", dash: "6 6" },
+  pendiente: { label: "Calle pendiente", color: "#6b7280", dash: "2 4" },
   en_progreso: { label: "Calle con visitas (en progreso)", color: "#f59e0b" },
   terminada: { label: "Calle terminada", color: "#16a34a" },
 };

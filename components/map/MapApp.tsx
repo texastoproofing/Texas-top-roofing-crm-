@@ -512,7 +512,7 @@ function Legend({ hail }: { hail: boolean }) {
         ))}
         {Object.entries(STREET_STATUS).map(([k, s]) => (
           <li key={k} className="flex items-center gap-2">
-            <svg width="22" height="8" aria-hidden><line x1="1" y1="4" x2="21" y2="4" stroke={s.color} strokeWidth="2.5" strokeDasharray={s.dash ? "4 3" : undefined} /></svg>
+            <svg width="22" height="8" aria-hidden><line x1="1" y1="4" x2="21" y2="4" stroke={s.color} strokeWidth={k === "pendiente" ? 1 : 2.5} strokeOpacity={k === "pendiente" ? 0.6 : 1} strokeDasharray={s.dash ? "2 3" : undefined} /></svg>
             {s.label}
           </li>
         ))}
