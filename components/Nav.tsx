@@ -260,23 +260,23 @@ export function MobileHeader({ user }: { user: ShellUser }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   return (
-    <header className="lg:hidden sticky top-0 z-[1000] bg-white/95 backdrop-blur border-b border-line pt-[env(safe-area-inset-top)]">
+    <header className="lg:hidden sticky top-0 z-[1000] bg-night text-white pt-[env(safe-area-inset-top)] shadow-[0_1px_0_rgba(255,255,255,.06)]">
       <div className="h-14 px-2 flex items-center justify-between gap-1">
-        <button type="button" onClick={() => setMenu(true)} className="btn-ghost px-2.5 min-h-[44px]" aria-label="Abrir menú"><Icon name="menu" className="w-6 h-6" /></button>
+        <button type="button" onClick={() => setMenu(true)} className="btn px-2.5 min-h-[44px] text-white hover:bg-white/10" aria-label="Abrir menú"><Icon name="menu" className="w-6 h-6" /></button>
         <Link href="/" className="flex items-center gap-2 min-w-0 mr-auto" aria-label="Texas Top Roofing CRM – Inicio">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.png" alt="" width={256} height={252} className="w-9 h-9 object-contain" />
+          <img src="/logo-mark-light.png" alt="" width={256} height={252} className="w-9 h-9 object-contain" />
           <span className="leading-none">
-            <span className="block text-[14px] font-bold tracking-wide">TEXAS <span className="text-brand">TOP</span></span>
-            <span className="block text-[14px] font-bold tracking-wide">ROOFING <span className="text-[10px] font-medium tracking-[0.2em] text-muted">CRM</span></span>
+            <span className="block text-[14px] font-bold tracking-wide text-white">TEXAS <span className="text-brand">TOP</span></span>
+            <span className="block text-[14px] font-bold tracking-wide text-white">ROOFING <span className="text-[10px] font-medium tracking-[0.2em] text-white/50">CRM</span></span>
           </span>
         </Link>
-        <Link href="/tormentas?tab=alertas" className="relative btn-ghost px-2.5 min-h-[44px]" aria-label={user.alerts ? `${user.alerts} alertas de granizo nuevas` : "Alertas de granizo"}>
+        <Link href="/tormentas?tab=alertas" className="relative btn px-2.5 min-h-[44px] text-white hover:bg-white/10" aria-label={user.alerts ? `${user.alerts} alertas de granizo nuevas` : "Alertas de granizo"}>
           <Icon name="bell" className="w-6 h-6" />
-          {user.alerts > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-white" aria-hidden />}
+          {user.alerts > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-night" aria-hidden />}
         </Link>
         <button type="button" onClick={() => setOpen(true)} className="p-1.5 rounded-full" aria-label="Perfil y sesión">
-          <Avatar name={user.name} className="w-9 h-9 text-xs" />
+          <Avatar name={user.name} className="w-9 h-9 text-xs ring-2 ring-white/20" />
         </button>
       </div>
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Tu cuenta">
@@ -288,6 +288,12 @@ export function MobileHeader({ user }: { user: ShellUser }) {
     </header>
   );
 }
+
+const MENU_TONE: Record<string, string> = {
+  "/": "bg-brand-soft text-brand", "/calendario": "bg-sky-50 text-sky-600", "/tareas": "bg-green-50 text-green-600",
+  "/trabajos": "bg-night text-white", "/contactos": "bg-violet-50 text-violet-600", "/mapa": "bg-brand-soft text-brand",
+  "/territorios": "bg-amber-50 text-amber-600", "/tormentas": "bg-sky-50 text-sky-700", "/usuarios": "bg-canvas text-ink/70", "/importar": "bg-canvas text-ink/70",
+};
 
 function MenuGrid({ user, path, onPick }: { user: ShellUser; path: string; onPick: () => void }) {
   return (
@@ -307,7 +313,7 @@ function MenuGrid({ user, path, onPick }: { user: ShellUser; path: string; onPic
                 <li key={i.href}>
                   <Link href={i.href} onClick={onPick} aria-current={on ? "page" : undefined}
                     className={`relative flex h-full flex-col items-center gap-1.5 rounded-xl border p-3 text-center text-[12px] font-medium leading-tight ${on ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-canvas"}`}>
-                    <Icon name={i.icon} className="w-6 h-6" />{i.label}
+                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${on ? "bg-brand text-white" : MENU_TONE[i.href] ?? "bg-canvas text-ink/70"}`}><Icon name={i.icon} className="w-5 h-5" /></span>{i.label}
                     {b > 0 && <span className="absolute top-1.5 right-1.5 rounded-full bg-brand px-1.5 text-[10px] font-semibold text-white">{b}</span>}
                   </Link>
                 </li>
@@ -339,13 +345,13 @@ export function BottomNav({ user }: { user: ShellUser }) {
             return (
               <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined}
                 className={`flex flex-col items-center justify-center gap-0.5 min-h-[58px] text-[12px] font-medium ${on ? "text-brand" : "text-muted"}`}>
-                <Icon name={t.icon} className="w-6 h-6" strokeWidth={on ? 2 : 1.75} />{t.label}
+                <span className={`flex items-center justify-center w-14 h-8 rounded-full transition ${on ? "bg-brand-soft" : ""}`}><Icon name={t.icon} className="w-6 h-6" strokeWidth={on ? 2 : 1.75} /></span>{t.label}
               </Link>
             );
           })}
           <button type="button" onClick={() => setMore(true)} aria-expanded={more}
             className={`relative flex flex-col items-center justify-center gap-0.5 min-h-[58px] text-[12px] font-medium ${inMore ? "text-brand" : "text-muted"}`}>
-            <Icon name="grid" className="w-6 h-6" strokeWidth={inMore ? 2 : 1.75} />Más
+            <span className={`flex items-center justify-center w-14 h-8 rounded-full transition ${inMore ? "bg-brand-soft" : ""}`}><Icon name="grid" className="w-6 h-6" strokeWidth={inMore ? 2 : 1.75} /></span>Más
             {user.tasks + user.alerts > 0 && <span className="absolute top-2 left-1/2 ml-2 w-2 h-2 rounded-full bg-brand" aria-hidden />}
           </button>
         </div>
@@ -361,16 +367,16 @@ export function BottomNav({ user }: { user: ShellUser }) {
 // Acciones rápidas en una tarjeta (Inicio, móvil)
 export function QuickButtons() {
   const items = [
-    { href: "/trabajos/nuevo", icon: "plus", l: "Lead" },
-    { href: "/calendario?nueva=otra", icon: "calendar", l: "Cita" },
-    { href: "/calendario?nueva=inspeccion", icon: "camera", l: "Inspección" },
-    { href: "/territorios", icon: "door", l: "Visita" },
+    { href: "/trabajos/nuevo", icon: "plus", l: "Lead", c: "bg-brand text-white" },
+    { href: "/calendario?nueva=otra", icon: "calendar", l: "Cita", c: "bg-sky-500 text-white" },
+    { href: "/calendario?nueva=inspeccion", icon: "camera", l: "Inspección", c: "bg-violet-500 text-white" },
+    { href: "/territorios", icon: "door", l: "Visita", c: "bg-amber-500 text-white" },
   ];
   return (
     <div className="grid grid-cols-4 gap-2">
       {items.map((a) => (
         <Link key={a.l} href={a.href} className="card flex flex-col items-center gap-1 py-3 text-xs font-medium active:bg-canvas">
-          <span className="w-9 h-9 rounded-full bg-brand-soft text-brand flex items-center justify-center"><Icon name={a.icon} className="w-5 h-5" /></span>{a.l}
+          <span className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${a.c}`}><Icon name={a.icon} className="w-5 h-5" strokeWidth={2} /></span>{a.l}
         </Link>
       ))}
     </div>

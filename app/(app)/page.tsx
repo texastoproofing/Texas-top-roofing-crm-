@@ -75,25 +75,31 @@ export default async function Dashboard() {
   const topMoney = Math.max(1, ...reps.map((r) => moneyOf(r.id)), ...reps.map((r) => r.signed));
 
   const KPI = [
-    { k: "lead" as StageKey, label: "Leads", icon: "contacts", tile: "bg-brand-soft text-brand" },
-    { k: "seguro" as StageKey, label: "Seguro / Estimado", icon: "file", tile: "bg-sky-50 text-sky-600" },
-    { k: "vendido" as StageKey, label: "Vendidos", icon: "check", tile: "bg-green-50 text-green-600" },
-    { k: "produccion" as StageKey, label: "Producción", icon: "hammer", tile: "bg-amber-50 text-amber-600" },
+    { k: "lead" as StageKey, label: "Leads", icon: "contacts", tile: "bg-brand-soft text-brand", m: "bg-brand-soft/70 border-brand/20 lg:bg-white lg:border-line", mt: "max-lg:bg-brand max-lg:text-white" },
+    { k: "seguro" as StageKey, label: "Seguro / Estimado", icon: "file", tile: "bg-sky-50 text-sky-600", m: "bg-sky-50 border-sky-200 lg:bg-white lg:border-line", mt: "max-lg:bg-sky-500 max-lg:text-white" },
+    { k: "vendido" as StageKey, label: "Vendidos", icon: "check", tile: "bg-green-50 text-green-600", m: "bg-green-50 border-green-200 lg:bg-white lg:border-line", mt: "max-lg:bg-green-600 max-lg:text-white" },
+    { k: "produccion" as StageKey, label: "Producción", icon: "hammer", tile: "bg-amber-50 text-amber-600", m: "bg-amber-50 border-amber-200 lg:bg-white lg:border-line", mt: "max-lg:bg-amber-500 max-lg:text-white" },
   ];
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Saludo */}
-      <div>
-        <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight">{name ? `¡Hola, ${name}!` : "¡Hola!"} <span aria-hidden>👋</span></h1>
-        <p className="muted mt-0.5"><span className="hidden sm:inline">Resumen general de Texas Top Roofing · </span><span className="capitalize">{new Date(today + "T12:00:00Z").toLocaleDateString("es-US", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}</span></p>
+      {/* Saludo: tarjeta oscura con color en móvil, texto simple en escritorio */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-night via-night-2 to-[#3a0d10] text-white p-5 -mx-1 lg:mx-0 lg:bg-none lg:text-ink lg:p-0 lg:rounded-none lg:overflow-visible">
+        <div className="lg:hidden pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-brand/30 blur-2xl" aria-hidden />
+        <h1 className="relative text-2xl sm:text-[28px] font-bold tracking-tight">{name ? `¡Hola, ${name}!` : "¡Hola!"} <span aria-hidden>👋</span></h1>
+        <p className="relative mt-0.5 text-sm text-white/70 lg:text-muted"><span className="hidden sm:inline">Resumen general de Texas Top Roofing · </span><span className="capitalize">{new Date(today + "T12:00:00Z").toLocaleDateString("es-US", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}</span></p>
+        <div className="lg:hidden relative mt-4 grid grid-cols-3 gap-2 text-center">
+          <Link href="/calendario" className="rounded-xl bg-white/10 py-2"><div className="text-lg font-bold tnum">{todays.length}</div><div className="text-[11px] text-white/70">Citas hoy</div></Link>
+          <Link href="/tareas" className="rounded-xl bg-white/10 py-2"><div className="text-lg font-bold tnum">{(tasksRes.data ?? []).length}</div><div className="text-[11px] text-white/70">Tareas</div></Link>
+          <Link href="/territorios" className="rounded-xl bg-white/10 py-2"><div className="text-lg font-bold tnum">{streets.length - doneStreets}</div><div className="text-[11px] text-white/70">Calles pend.</div></Link>
+        </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {KPI.map((x) => (
-          <Link key={x.k} href={`/trabajos?etapa=${x.k}`} className="card p-3 lg:p-5 flex items-center lg:items-start gap-3 lg:gap-4 hover:shadow-pop transition">
-            <span className={`w-10 h-10 lg:w-14 lg:h-14 shrink-0 rounded-xl flex items-center justify-center ${x.tile}`}><Icon name={x.icon} className="w-5 h-5 lg:w-7 lg:h-7" /></span>
+          <Link key={x.k} href={`/trabajos?etapa=${x.k}`} className={`rounded-xl border shadow-card p-3 lg:p-5 flex items-center lg:items-start gap-3 lg:gap-4 hover:shadow-pop transition ${x.m}`}>
+            <span className={`w-10 h-10 lg:w-14 lg:h-14 shrink-0 rounded-xl flex items-center justify-center ${x.tile} ${x.mt}`}><Icon name={x.icon} className="w-5 h-5 lg:w-7 lg:h-7" /></span>
             <span className="min-w-0">
               <span className="hidden lg:block text-sm font-medium text-ink/80">{x.label}</span>
               <span className="block text-xl lg:text-3xl font-bold tnum leading-tight">{n(x.k)}</span>
@@ -111,7 +117,7 @@ export default async function Dashboard() {
 
       <div className="grid lg:grid-cols-2 gap-5 order-last lg:order-none">
         {/* Pipeline (dona) */}
-        <Section title="Pipeline de ventas" action={<Link href="/trabajos" className="link">Ver pipeline →</Link>} className="order-5 lg:order-none">
+        <Section title={<T i="jobs" c="bg-night text-white">Pipeline de ventas</T>} action={<Link href="/trabajos" className="link">Ver pipeline →</Link>} className="order-5 lg:order-none">
           {pipeTotal === 0 ? <EmptyInline>No hay trabajos todavía.</EmptyInline> : (
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <Donut parts={pipe.map((s) => ({ v: s.n, color: STAGE_HEX[s.key] }))} total={pipeTotal} label="Trabajos" />
@@ -133,7 +139,7 @@ export default async function Dashboard() {
 
         {/* Rendimiento del equipo (solo staff) */}
         {staff && (
-          <Section title="Rendimiento del equipo" action={<Link href="/tormentas" className="link">Ver ranking →</Link>} className="order-6 lg:order-none">
+          <Section title={<T i="trophy" c="bg-amber-500 text-white">Rendimiento del equipo</T>} action={<Link href="/tormentas" className="link">Ver ranking →</Link>} className="order-6 lg:order-none">
             {reps.length === 0 ? <EmptyInline>Sin trabajos asignados a vendedores.</EmptyInline> : (
               <ol className="divide-y divide-line/70">
                 {reps.map((r, i) => {
@@ -160,7 +166,7 @@ export default async function Dashboard() {
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Citas de hoy */}
-        <Section title={<>{todays.length ? "Citas de hoy" : "Próximas citas"} <span className="text-muted font-normal">({upcoming.length})</span></>} action={<Link href="/calendario" className="link">Ver agenda →</Link>} className="order-1 lg:order-none">
+        <Section title={<T i="calendar" c="bg-sky-500 text-white">{todays.length ? "Citas de hoy" : "Próximas citas"} <span className="text-muted font-normal">({upcoming.length})</span></T>} action={<Link href="/calendario" className="link">Ver agenda →</Link>} className="order-1 lg:order-none">
           {upcoming.length === 0 ? <EmptyInline action={<Link href="/calendario?nueva=inspeccion" className="link">+ Cita</Link>}>Sin citas en los próximos 7 días.</EmptyInline> : (
             <ul className="space-y-2">
               {upcoming.map((a) => {
@@ -182,7 +188,7 @@ export default async function Dashboard() {
         </Section>
 
         {/* Door-to-door */}
-        <Section title="Door-to-Door (Calles)" action={<Link href="/territorios" className="link">Ver calles →</Link>} className="order-2 lg:order-none">
+        <Section title={<T i="door" c="bg-brand text-white">Door-to-Door (Calles)</T>} action={<Link href="/territorios" className="link">Ver calles →</Link>} className="order-2 lg:order-none">
           {streets.length === 0 ? <EmptyInline>No hay calles cargadas.</EmptyInline> : (
             <div className="space-y-3">
               <div>
@@ -206,7 +212,7 @@ export default async function Dashboard() {
         </Section>
 
         {/* Actividad */}
-        <Section title="Actividad reciente" className="order-7 lg:order-none">
+        <Section title={<T i="activity" c="bg-violet-500 text-white">Actividad reciente</T>} className="order-7 lg:order-none">
           {(actRes.data ?? []).length === 0 ? <EmptyInline>Todavía no hay actividad.</EmptyInline> : (
             <ul className="space-y-3">
               {actRes.data!.map((a: any) => (
@@ -224,7 +230,7 @@ export default async function Dashboard() {
         </Section>
 
         {/* Mis tareas */}
-        <Section title="Mis tareas" action={<Link href="/tareas" className="link">Ver todas →</Link>} className="order-3 lg:order-none">
+        <Section title={<T i="tasks" c="bg-green-600 text-white">Mis tareas</T>} action={<Link href="/tareas" className="link">Ver todas →</Link>} className="order-3 lg:order-none">
           {(tasksRes.data ?? []).length === 0 ? <EmptyInline action={<Link href="/tareas?nueva=1" className="link">+ Tarea</Link>}>Sin tareas pendientes.</EmptyInline> : (
             <ul className="divide-y divide-line/70">
               {tasksRes.data!.map((t) => {
@@ -244,7 +250,7 @@ export default async function Dashboard() {
         </Section>
 
         {/* Requieren atención */}
-        <Section title="Requieren atención" className="lg:col-span-2 order-4 lg:order-none" action={<span className="text-xs text-muted">Sin cambio en 14+ días</span>}>
+        <Section title={<T i="clock" c="bg-orange-500 text-white">Requieren atención</T>} className="lg:col-span-2 order-4 lg:order-none" action={<span className="text-xs text-muted">Sin cambio en 14+ días</span>}>
           {stale.length === 0 ? <EmptyInline>Todo al día.</EmptyInline> : (
             <ul className="divide-y divide-line/70">
               {stale.map((j) => (
@@ -264,6 +270,11 @@ export default async function Dashboard() {
       </div>
     </div>
   );
+}
+
+// Título de sección con icono de color
+function T({ i, c, children }: { i: string; c: string; children: React.ReactNode }) {
+  return <span className="flex items-center gap-2"><span className={`w-7 h-7 rounded-lg flex items-center justify-center ${c}`}><Icon name={i} className="w-4 h-4" strokeWidth={2} /></span>{children}</span>;
 }
 
 const STAGE_HEX: Record<StageKey, string> = {
