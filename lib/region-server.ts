@@ -123,9 +123,18 @@ export async function importNexrad(region: Region, from: string, to: string) {
   const { data: zipsData } = await admin.from("zip_boundaries").select("zip, geom, bbox").not("geom", "is", null);
   const zips = ((zipsData ?? []) as any[]).filter((z) => z.bbox && (z.bbox[0] + z.bbox[2]) / 2 >= s && (z.bbox[0] + z.bbox[2]) / 2 <= n && (z.bbox[1] + z.bbox[3]) / 2 >= w && (z.bbox[1] + z.bbox[3]) / 2 <= e);
 
+  // Fechas ya cubiertas por HailPoint en la región (±1 día): se omiten
+  const covered = new Set<string>();
+  const zipNames = zips.map((z) => z.zip);
+  if (zipNames.length) {
+    const { data: hp } = await admin.from("zip_hail_stats").select("event_date").eq("source_key", "hailpoint")
+      .in("zip", zipNames).gte("event_date", addDays(from, -1)).lte("event_date", addDays(to, 1));
+    for (const r of (hp ?? []) as any[]) for (const k of [-1, 0, 1]) covered.add(addDays(r.event_date, k));
+  }
+
   const stats: any[] = [];
   const swaths: any[] = [];
-  const dates = Array.from(new Set(dets.map((d) => d.date)));
+  const dates = Array.from(new Set(dets.map((d) => d.date))).filter((d) => !covered.has(d));
   for (const date of dates) {
     const dd = dets.filter((d) => d.date === date);
     // Franjas: tramos entre detecciones consecutivas de la misma celda
@@ -220,11 +229,12 @@ export async function importHailpoint(region: Region, map: { id: string; date: s
     stats.push({ zip: z.zip, event_date: map.date, source_key: "hailpoint", max_hail_in: mx, frac_1: r4(c1), frac_175: r4(c175), frac_25: r4(c25) });
   }
 
-  // HailPoint reemplaza al radar NEXRAD en esas fechas (±1 día) para no contar dos veces la misma tormenta
+  // HailPoint reemplaza al radar NEXRAD en esas fechas (±1 día) para no contar dos veces la misma tormenta,
+  // solo si el mapa de HailPoint tiene granizo dentro de la región.
   const days = [-1, 0, 1].map((k) => { const x = new Date(map.date + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + k); return x.toISOString().slice(0, 10); });
   const zipList = zips.map((z) => z.zip);
-  if (zipList.length) await admin.from("zip_hail_stats").delete().eq("source_key", "nexrad").in("event_date", days).in("zip", zipList);
-  const { data: nx } = await admin.from("storm_swaths").select("id, bbox").eq("source_key", "nexrad").in("event_date", days);
+  if (stats.length && zipList.length) await admin.from("zip_hail_stats").delete().eq("source_key", "nexrad").in("event_date", days).in("zip", zipList);
+  const { data: nx } = stats.length ? await admin.from("storm_swaths").select("id, bbox").eq("source_key", "nexrad").in("event_date", days) : { data: [] };
   const nxIds = ((nx ?? []) as any[]).filter((x) => { const la = (x.bbox[0] + x.bbox[2]) / 2, lo = (x.bbox[1] + x.bbox[3]) / 2; return la >= s && la <= n && lo >= w && lo <= e; }).map((x) => x.id);
   for (let i = 0; i < nxIds.length; i += 200) await admin.from("storm_swaths").delete().in("id", nxIds.slice(i, i + 200));
 
