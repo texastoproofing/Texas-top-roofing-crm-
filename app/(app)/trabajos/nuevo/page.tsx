@@ -44,7 +44,7 @@ export default async function NewJob({ searchParams }: { searchParams: { contact
 
   return (
     <>
-      <PageHeader title="Nuevo trabajo" sub="Lead → trabajo, igual que en JobNimbus" />
+      <PageHeader title="Nuevo lead" sub="Cliente y trabajo" back={{ href: "/trabajos", label: "Trabajos" }} />
       <form action={createJob} className="space-y-5">
         {streetId && <input type="hidden" name="street_id" value={streetId} />}
         <section className="card p-4 space-y-4">

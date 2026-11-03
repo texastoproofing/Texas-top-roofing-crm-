@@ -11,7 +11,7 @@ export default async function NewContact() {
   ]);
   return (
     <>
-      <PageHeader title="Nuevo contacto" />
+      <PageHeader title="Nuevo contacto" back={{ href: "/contactos", label: "Contactos" }} />
       <form action={createContact} className="card p-4 space-y-5">
         <ContactFields users={users.filter((u) => u.active)} territories={terr.data ?? []} />
         <button className="btn-primary w-full sm:w-auto">Guardar contacto</button>

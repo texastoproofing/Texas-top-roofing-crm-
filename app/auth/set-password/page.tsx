@@ -16,8 +16,9 @@ export default async function SetPasswordPage({ searchParams }: { searchParams: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen flex items-center justify-center px-4 bg-canvas">
       <form action={setPassword} className="card w-full max-w-sm p-6 space-y-4">
+        <a href="/" className="text-sm font-medium text-muted hover:text-ink">← Volver</a>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-mark.png" alt="Texas Top Roofing" width={256} height={252} className="w-14 h-auto" />
         <h1 className="h1">Cambiar contraseña</h1>

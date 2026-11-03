@@ -4,21 +4,31 @@
 
 :root { color-scheme: light; }
 html { -webkit-text-size-adjust: 100%; }
-body { @apply bg-gray-50 text-gray-900 antialiased; }
+body { @apply bg-canvas text-ink antialiased; font-feature-settings: "cv11", "ss01"; }
+:focus-visible { outline: 2px solid #D71920; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 @layer components {
-  .card { @apply bg-white border border-gray-200 rounded-xl; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 min-h-[44px] text-sm font-semibold transition active:scale-[.98] disabled:opacity-50; }
-  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-dark; }
-  .btn-secondary { @apply btn bg-white border border-gray-300 text-gray-800 hover:bg-gray-50; }
-  .btn-ghost { @apply btn text-gray-700 hover:bg-gray-100; }
-  .input { @apply w-full rounded-lg border border-gray-300 bg-white px-3 min-h-[44px] text-base focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand; }
+  .card { @apply bg-white border border-line rounded-xl shadow-card; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 min-h-[44px] text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none; }
+  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-dark shadow-sm; }
+  .btn-dark { @apply btn bg-night text-white hover:bg-night-3; }
+  .btn-secondary { @apply btn bg-white border border-line text-ink hover:bg-canvas; }
+  .btn-ghost { @apply btn text-ink/80 hover:bg-canvas; }
+  .btn-sm { @apply min-h-[36px] px-3 text-[13px]; }
+  .input { @apply w-full rounded-lg border border-line bg-white px-3 min-h-[44px] text-base text-ink placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand; }
   textarea.input { @apply py-2; }
-  .label { @apply block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1; }
-  .h1 { @apply text-2xl font-bold tracking-tight; }
-  .h2 { @apply text-lg font-bold; }
-  .muted { @apply text-sm text-gray-500; }
-  .chip { @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap; }
+  .label { @apply block text-[13px] font-medium text-muted mb-1; }
+  .h1 { @apply text-xl sm:text-2xl font-semibold tracking-tight text-ink; }
+  .h2 { @apply text-base font-semibold text-ink; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted; }
+  .muted { @apply text-sm text-muted; }
+  .chip { @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap; }
+  .seg { @apply inline-flex rounded-lg bg-canvas p-1 border border-line gap-1; }
+  .seg > * { @apply rounded-md px-3 py-1.5 text-sm font-medium text-muted whitespace-nowrap; }
+  .seg > [aria-current="page"], .seg > [aria-pressed="true"] { @apply bg-white text-ink shadow-card; }
+  .link { @apply text-sm font-semibold text-brand hover:text-brand-dark; }
+  .tnum { font-variant-numeric: tabular-nums; }
 }
 
 /* Marcadores del mapa */
@@ -38,3 +48,6 @@ body { @apply bg-gray-50 text-gray-900 antialiased; }
   main { padding: 0 !important; max-width: none !important; }
   .card { break-inside: avoid; }
 }
+
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sheet { from { transform: translateY(24px); opacity: .6 } to { transform: none; opacity: 1 } }

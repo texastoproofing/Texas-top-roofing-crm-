@@ -10,7 +10,7 @@ export function StatusSelect({ action, value, compact }: {
   return (
     <form ref={ref} action={action}>
       <select name="status" defaultValue={value} aria-label="Cambiar estado"
-        className={compact ? "w-full rounded-md border border-gray-200 bg-gray-50 text-xs py-1 px-1.5" : "input"}
+        className={compact ? "w-full rounded-md border border-line bg-canvas text-xs py-1.5 px-1.5" : "input"}
         onChange={() => ref.current?.requestSubmit()}>
         {STAGES.map((st) => (
           <optgroup key={st.key} label={st.label}>

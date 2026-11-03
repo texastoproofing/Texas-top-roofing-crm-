@@ -1,0 +1,50 @@
+// Iconos de línea (24×24, trazo 1.75) — un solo set para todo el CRM
+const P: Record<string, string> = {
+  home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z",
+  jobs: "M8 6V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1m-12 0h16a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a1 1 0 0 1 1-1Zm-1 6h18",
+  contacts: "M16 20v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 9v-1a4 4 0 0 0-3-3.9M15 3.1a4 4 0 0 1 0 7.8",
+  calendar: "M8 2v4m8-4v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+  tasks: "M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9",
+  map: "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14",
+  streets: "M4 19 8 5m8 0 4 14M12 6v2m0 4v2m0 4v2",
+  storm: "M7 16a4 4 0 0 1-.9-7.9A5.5 5.5 0 0 1 17 8a4 4 0 0 1 .5 8H7Zm1 4 1-2m3 2 1-2m3 2 1-2",
+  pin: "M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Zm0-9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  users: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9a6 6 0 0 1 12 0m2-9a3 3 0 1 0 0-6m1.5 15H22a5 5 0 0 0-4-4.9",
+  import: "M12 4v11m0 0-4-4m4 4 4-4M5 20h14",
+  plus: "M12 5v14M5 12h14",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+  bell: "M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9Zm4.3 13a1.94 1.94 0 0 0 3.4 0",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 5-5-5-5m5 5H9",
+  key: "M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l1.1-1.1A4 4 0 0 1 15 7Zm1 0h.01",
+  chevronLeft: "m15 18-6-6 6-6",
+  chevronRight: "m9 18 6-6-6-6",
+  chevronDown: "m6 9 6 6 6-6",
+  search: "m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z",
+  phone: "M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z",
+  message: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z",
+  note: "M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5Z",
+  door: "M13 4h3a2 2 0 0 1 2 2v14M2 20h3m8 0h9M10 12v.01M13 4.6v16.2a1 1 0 0 1-1.2 1L5 20V5.6a2 2 0 0 1 1.6-2l5-1a1 1 0 0 1 1.4 1Z",
+  route: "M6 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12-8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM9 16h6.5a3.5 3.5 0 0 0 0-7H12",
+  check: "M20 6 9 17l-5-5",
+  x: "M18 6 6 18M6 6l12 12",
+  arrowRight: "M5 12h14m-6-6 6 6-6 6",
+  trophy: "M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0V4Zm10 1h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
+  dollar: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z",
+  hammer: "m15 12-8.5 8.5a2.1 2.1 0 0 1-3-3L12 9m5.6 6.1L22 10.7M8.3 2.3 13 7l-3 3-4.7-4.7a2 2 0 0 1 3-3Zm9 9 1.4-1.4a2 2 0 0 0 0-2.8L14 2",
+  inbox: "M22 12h-6l-2 3h-4l-2-3H2m3.5-6.9L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z",
+  clock: "M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z",
+  activity: "M22 12h-4l-3 9L9 3l-3 9H2",
+  sidebar: "M9 3v18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
+  file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 0v6h6",
+  camera: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3ZM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+};
+export type IconName = keyof typeof P | string;
+export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75 }: { name: IconName; className?: string; strokeWidth?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={P[name] ?? P.grid} />
+    </svg>
+  );
+}

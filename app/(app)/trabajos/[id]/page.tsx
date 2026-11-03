@@ -4,6 +4,7 @@ import { getSession, listProfiles } from "@/lib/auth";
 import { APPT_KINDS, apptLabel, statusInfo } from "@/lib/constants";
 import { fmtDate, fmtDateTime, fmtMoney, fullName, mapsHref, telHref } from "@/lib/format";
 import { KV, StatusBadge } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { StatusSelect } from "@/components/StatusSelect";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { JobFields } from "@/components/JobForm";
@@ -40,29 +41,33 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
 
   return (
     <>
-      <div className="mb-5">
-        <Link href="/trabajos" className="text-sm font-semibold text-brand">← Trabajos</Link>
+      <div className="mb-4">
+        <Link href="/trabajos" className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-ink"><Icon name="chevronLeft" className="w-4 h-4" />Trabajos</Link>
         <div className="flex flex-wrap items-center gap-2 mt-1">
-          <h1 className="h1">#{j.number} {j.name}</h1>
+          <h1 className="h1">{fullName(c) !== "Sin nombre" ? fullName(c) : j.name}</h1>
           <StatusBadge status={j.status} />
         </div>
-        <p className="muted">
-          <Link href={`/contactos/${c.id}`} className="font-semibold text-gray-800">{fullName(c)}</Link>
-          {addr.length > 0 && ` · ${addr.join(", ")}`}
+        <p className="muted mt-0.5">
+          #{j.number} · {j.name}
+          {addr.length > 0 && <> · {addr.join(", ")}</>}
         </p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {c?.phone && <a className="btn-primary" href={telHref(c.phone)}>Llamar</a>}
-          {c?.phone && <a className="btn-secondary" href={"sms:" + c.phone.replace(/[^\d+]/g, "")}>Mensaje</a>}
-          {map && <a className="btn-secondary" href={map} target="_blank" rel="noopener">Mapa</a>}
+        <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2 mt-3">
+          {c?.phone && <a className="btn-primary px-2 sm:px-4" href={telHref(c.phone)}><Icon name="phone" className="w-4 h-4" /><span className="text-xs sm:text-sm">Llamar</span></a>}
+          {c?.phone && <a className="btn-secondary px-2 sm:px-4" href={"sms:" + c.phone.replace(/[^\d+]/g, "")}><Icon name="message" className="w-4 h-4" /><span className="text-xs sm:text-sm">Mensaje</span></a>}
+          {map && <a className="btn-secondary px-2 sm:px-4" href={map} target="_blank" rel="noopener"><Icon name="pin" className="w-4 h-4" /><span className="text-xs sm:text-sm">Ir</span></a>}
+          <Link className="btn-secondary px-2 sm:px-4" href={`/contactos/${c.id}`}><Icon name="contacts" className="w-4 h-4" /><span className="text-xs sm:text-sm">Cliente</span></Link>
         </div>
       </div>
 
-      <nav className="flex gap-1 border-b border-gray-200 mb-5 -mx-4 px-4 overflow-x-auto" aria-label="Secciones del trabajo">
+      <nav className="sticky top-14 lg:top-0 z-20 -mx-4 px-4 lg:mx-0 lg:px-0 bg-canvas/95 backdrop-blur flex gap-1 border-b border-line mb-5 overflow-x-auto" aria-label="Secciones del trabajo">
         {[{ k: "resumen", l: "Resumen", href: `/trabajos/${j.id}` }, { k: "archivos", l: `Fotos y documentos${fileCount ? ` (${fileCount})` : ""}`, href: `/trabajos/${j.id}?tab=archivos` }].map((t) => (
           <Link key={t.k} href={t.href} scroll={false} aria-current={tab === t.k ? "page" : undefined}
-            className={`whitespace-nowrap px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px ${tab === t.k ? "border-brand text-brand" : "border-transparent text-gray-600"}`}>
+            className={`whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === t.k ? "border-brand text-ink" : "border-transparent text-muted hover:text-ink"}`}>
             {t.l}
           </Link>
+        ))}
+        {tab === "resumen" && [["#tareas", "Tareas"], ["#citas", "Citas"], ["#actividad", "Actividad"], ["#seguro", "Seguro"], ["#equipo", "Montos"]].map(([h, l]) => (
+          <a key={h} href={h} className="whitespace-nowrap px-3 py-2.5 text-sm text-muted hover:text-ink lg:hidden">{l}</a>
         ))}
       </nav>
 
@@ -79,16 +84,16 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
             <StatusSelect action={setJobStatus.bind(null, j.id)} value={j.status} />
           </section>
 
-          <section className="card p-4">
+          <section id="tareas" className="card p-4 scroll-mt-28">
             <h2 className="h2 mb-3">Tareas</h2>
             <TaskForm users={active} jobId={j.id} contactId={c.id} me={profile.id} />
             <div className="mt-3"><TaskList tasks={(tasks.data ?? []) as any[]} /></div>
           </section>
 
-          <section className="card p-4">
+          <section id="citas" className="card p-4 scroll-mt-28">
             <h2 className="h2 mb-3">Citas</h2>
             {(appts.data ?? []).length > 0 && (
-              <ul className="divide-y divide-gray-100 mb-3">
+              <ul className="divide-y divide-line/70 mb-3">
                 {appts.data!.map((a: any) => (
                   <li key={a.id} className="flex items-start justify-between gap-3 py-2.5">
                     <div>
@@ -133,7 +138,7 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
             </details>
           </section>
 
-          <section className="card p-4">
+          <section id="actividad" className="card p-4 scroll-mt-28">
             <h2 className="h2 mb-3">Actividad</h2>
             <ActivityFeed action={addJobNote.bind(null, j.id, c.id)} items={(acts.data ?? []) as any[]} />
           </section>
@@ -144,7 +149,7 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
             job={{ id: j.id, status: j.status, reference_authorized: !!j.reference_authorized, reference_authorized_at: j.reference_authorized_at ?? null, reference_note: j.reference_note ?? null }}
             canEdit={profile.role !== "vendedor" || j.sales_rep_id === profile.id || j.created_by === profile.id}
           />
-          <section className="card p-4">
+          <section id="seguro" className="card p-4 scroll-mt-28">
             <h2 className="h2 mb-2">Seguro</h2>
             <KV k="Tipo" v={j.job_type === "retail" ? "Retail" : "Seguro"} />
             <KV k="Aseguradora" v={j.insurer} />
@@ -156,7 +161,7 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
             {j.adjuster_phone && <KV k="Tel. ajustador" v={<a className="text-brand" href={telHref(j.adjuster_phone)}>{j.adjuster_phone}</a>} />}
             {j.adjuster_email && <KV k="Correo ajustador" v={j.adjuster_email} />}
           </section>
-          <section className="card p-4">
+          <section id="equipo" className="card p-4 scroll-mt-28">
             <h2 className="h2 mb-2">Equipo y montos</h2>
             <KV k="Vendedor" v={(j as any).rep?.full_name} />
             <KV k="Project manager" v={(j as any).pm?.full_name} />

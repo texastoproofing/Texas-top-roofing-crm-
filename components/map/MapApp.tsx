@@ -184,6 +184,11 @@ export function MapApp(props: {
     };
   }, [showHail, zones, props.hail, hailPeriod, assignedByZip, props.me]);
   const zoneSel = selZone ? zones.find((z) => z.zip === selZone) ?? null : null;
+  const detailKey = `${selected ?? ""}|${selStreet ?? ""}`;
+  useEffect(() => {
+    if (detailKey === "|" || typeof window === "undefined" || window.innerWidth >= 1024) return;
+    document.getElementById("map-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [detailKey]);
   const goZone = (z: HailZone) => { setSelZone(z.zip); setSelected(null); setSelStreet(null); if (z.bbox) setFitBox({ bbox: z.bbox, key: Date.now() }); document.querySelector(".leaflet-container")?.scrollIntoView({ behavior: "smooth", block: "center" }); };
 
   const inView = (p: MapPoint) => !bounds || (p.lat! >= bounds.s && p.lat! <= bounds.n && p.lng! >= bounds.w && p.lng! <= bounds.e);
@@ -369,14 +374,16 @@ export function MapApp(props: {
                 onZone={(zip) => { setSelZone(zip); setSelected(null); setSelStreet(null); }}
               />
             </div>
-            <Legend hail={showHail} />
+            <div className="hidden lg:block"><Legend hail={showHail} /></div>
           </div>
 
           <div className="px-4 lg:px-0 mt-3 lg:mt-0 space-y-3 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
-            {sel && <PointCard p={sel} inRoute={routeIndex.has(sel.id)} onToggleRoute={() => toggleStop(sel.id)} onClose={() => setSelected(null)} />}
-            {zoneSel && <ZoneCard z={zoneSel} rank={zones.indexOf(zoneSel)} assigned={assignedByZip.get(zoneSel.zip) ?? null} me={props.me} onClose={() => setSelZone(null)} />}
+            <div id="map-detail" className="space-y-3 scroll-mt-20">
+              {sel && <PointCard p={sel} inRoute={routeIndex.has(sel.id)} onToggleRoute={() => toggleStop(sel.id)} onClose={() => setSelected(null)} />}
+              {selS && <StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
+              {zoneSel && <ZoneCard z={zoneSel} rank={zones.indexOf(zoneSel)} assigned={assignedByZip.get(zoneSel.zip) ?? null} me={props.me} onClose={() => setSelZone(null)} />}
+            </div>
             {showHail && <HailZonesList zones={zones} period={`${HAIL_PERIODS.find(([k]) => k === hailMonths)![1]}${region !== "todas" ? ` · ${REGIONS.find((r) => r.key === region)?.name}` : ""}`} selected={selZone} assigned={assignedByZip} me={props.me} onGo={goZone} />}
-            {selS && <StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
 
             <div className="flex items-center justify-between">
               <h2 className="font-bold">{listItems.length} en {onlyInView ? "esta vista" : "total"}</h2>
@@ -409,6 +416,7 @@ export function MapApp(props: {
                 })}
               </ul>
             )}
+            <div className="lg:hidden"><Legend hail={showHail} /></div>
           </div>
         </div>
       )}
@@ -513,7 +521,7 @@ function ZoneCard({ z, rank, assigned, me, onClose }: {
 
 function Legend({ hail }: { hail: boolean }) {
   return (
-    <details className="mt-2 card p-2.5 text-xs" open>
+    <details className="mt-2 card p-2.5 text-xs">
       <summary className="font-semibold cursor-pointer">Leyenda</summary>
       <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2">
         {MAP_GROUPS.map((g) => (

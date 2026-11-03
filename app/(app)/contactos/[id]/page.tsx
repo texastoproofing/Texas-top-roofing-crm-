@@ -4,6 +4,7 @@ import { getSession, listProfiles } from "@/lib/auth";
 import { sourceLabel } from "@/lib/constants";
 import { fmtDateTime, fmtMoney, fullName, mapsHref, telHref } from "@/lib/format";
 import { KV, StatusBadge } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { ContactFields } from "@/components/ContactForm";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { addContactNote, deleteContact, updateContact } from "../actions";
@@ -27,14 +28,14 @@ export default async function ContactPage({ params }: { params: { id: string } }
   return (
     <>
       <div className="mb-5">
-        <Link href="/contactos" className="text-sm font-semibold text-brand">← Contactos</Link>
+        <Link href="/contactos" className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-ink"><Icon name="chevronLeft" className="w-4 h-4" />Contactos</Link>
         <h1 className="h1 mt-1">{fullName(c)}</h1>
         <p className="muted">{[c.address, c.city, c.zip].filter(Boolean).join(", ")}</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {c.phone && <a className="btn-primary" href={telHref(c.phone)}>Llamar</a>}
-          {c.phone && <a className="btn-secondary" href={"sms:" + c.phone.replace(/[^\d+]/g, "")}>Mensaje</a>}
-          {map && <a className="btn-secondary" href={map} target="_blank" rel="noopener">Mapa</a>}
-          <Link className="btn-secondary" href={`/trabajos/nuevo?contacto=${c.id}`}>+ Trabajo</Link>
+        <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2 mt-3">
+          {c.phone && <a className="btn-primary px-2 sm:px-4" href={telHref(c.phone)}><Icon name="phone" className="w-4 h-4" /><span className="text-xs sm:text-sm">Llamar</span></a>}
+          {c.phone && <a className="btn-secondary px-2 sm:px-4" href={"sms:" + c.phone.replace(/[^\d+]/g, "")}><Icon name="message" className="w-4 h-4" /><span className="text-xs sm:text-sm">Mensaje</span></a>}
+          {map && <a className="btn-secondary px-2 sm:px-4" href={map} target="_blank" rel="noopener"><Icon name="pin" className="w-4 h-4" /><span className="text-xs sm:text-sm">Ir</span></a>}
+          <Link className="btn-secondary px-2 sm:px-4" href={`/trabajos/nuevo?contacto=${c.id}`}><Icon name="plus" className="w-4 h-4" /><span className="text-xs sm:text-sm">Trabajo</span></Link>
         </div>
       </div>
 
@@ -43,7 +44,7 @@ export default async function ContactPage({ params }: { params: { id: string } }
           <section className="card p-4">
             <h2 className="h2 mb-3">Trabajos</h2>
             {(jobs.data ?? []).length === 0 ? <p className="muted">Este contacto no tiene trabajos.</p> : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line/70">
                 {jobs.data!.map((j) => (
                   <li key={j.id}>
                     <Link href={`/trabajos/${j.id}`} className="flex items-center justify-between gap-2 py-2.5">

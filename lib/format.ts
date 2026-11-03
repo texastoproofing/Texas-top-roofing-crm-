@@ -87,3 +87,14 @@ export function num(fd: FormData, k: string): number | null {
   const n = Number(v.replace(/[$,]/g, ""));
   return Number.isFinite(n) ? n : null;
 }
+
+// Nombre visible: el del perfil; si parece un usuario técnico (una sola palabra larga en minúsculas o con números), uno genérico
+export function displayName(full: string | null | undefined) {
+  const n = (full ?? "").trim();
+  if (!n || (!n.includes(" ") && n === n.toLowerCase() && (/\d/.test(n) || n.length >= 14))) return "Equipo Texas Top";
+  return n;
+}
+export const firstName = (full: string | null | undefined) => {
+  const d = displayName(full);
+  return d === "Equipo Texas Top" ? null : d.split(" ")[0];
+};
