@@ -10,7 +10,8 @@ import {
 } from "@/lib/storm";
 import { statusInfo } from "@/lib/constants";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { assignZip, endAssignment, reviewAlert, saveStormSettings, syncHistoryBatch, syncRecent } from "@/app/(app)/tormentas/actions";
+import { assignZip, endAssignment, importRegionRadar, importRegionZips, reviewAlert, saveStormSettings, syncHistoryBatch, syncRecent } from "@/app/(app)/tormentas/actions";
+import { REGIONS } from "@/lib/regions";
 import { swathColor, type MapLayers } from "./StormMap";
 
 const StormMap = dynamic(() => import("./StormMap"), {
@@ -658,6 +659,8 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
         </ul>
       </section>
 
+      <RegionsSection historyStart={settings.history_start} />
+
       <section className="card p-3 space-y-2">
         <h2 className="font-bold">Datos de NOAA/SPC</h2>
         <p className="text-xs text-gray-500">Reportes preliminares de granizo y viento en el área San Antonio–Temple. Se actualizan solos al abrir esta página (cada 6 h como máximo).</p>
@@ -683,13 +686,57 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
   );
 }
 
+function RegionsSection({ historyStart }: { historyStart: string }) {
+  const router = useRouter();
+  const [st, setSt] = useState<Record<string, { busy: boolean; msg: string | null; err: boolean }>>({});
+  const set = (k: string, v: { busy: boolean; msg: string | null; err: boolean }) => setSt((x) => ({ ...x, [k]: v }));
+  async function loadZips(k: string) {
+    set(k, { busy: true, msg: "Cargando contornos ZIP del Censo…", err: false });
+    const r = await importRegionZips(k).catch(() => null);
+    set(k, r && r.ok ? { busy: false, msg: `${r.added} ZIP nuevos con contorno (${r.found} en el área).`, err: false } : { busy: false, msg: r && !r.ok ? r.error : "Se interrumpió.", err: true });
+    router.refresh();
+  }
+  async function loadRadar(k: string) {
+    let next: string | null = historyStart, sw = 0, stc = 0;
+    while (next) {
+      set(k, { busy: true, msg: `Radar NOAA: procesando desde ${next}… (${sw} franjas, ${stc} ZIP-día)`, err: false });
+      const r = await importRegionRadar(k, next).catch(() => null);
+      if (!r || !r.ok) { set(k, { busy: false, msg: r && !r.ok ? r.error : "Se interrumpió. Puedes reanudar.", err: true }); router.refresh(); return; }
+      sw += r.swaths; stc += r.stats; next = r.next;
+    }
+    set(k, { busy: false, msg: `Listo: ${sw} franjas de radar y ${stc} registros ZIP-día.`, err: false });
+    router.refresh();
+  }
+  return (
+    <section className="card p-3 space-y-2">
+      <h2 className="font-bold">Regiones</h2>
+      <p className="text-xs text-gray-500">Austin usa datos de HailPoint de la investigación. Para otras regiones el CRM carga los contornos ZIP del Censo y las detecciones de granizo del radar NEXRAD de NOAA (gratis, estimado). Los reportes observados de NOAA/SPC ya cubren San Antonio–Temple.</p>
+      <ul className="divide-y divide-gray-100">
+        {REGIONS.filter((r) => r.key !== "austin").map((r) => {
+          const x = st[r.key];
+          return (
+            <li key={r.key} className="py-2 space-y-2">
+              <div className="font-semibold">{r.name}</div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-secondary" disabled={x?.busy} onClick={() => loadZips(r.key)}>1. Cargar contornos ZIP</button>
+                <button type="button" className="btn-secondary" disabled={x?.busy} onClick={() => loadRadar(r.key)}>2. Cargar radar desde {fmtDate(historyStart)}</button>
+              </div>
+              {x?.msg && <p className={`text-sm ${x.err ? "text-red-700" : "text-gray-700"}`} role="status">{x.msg}</p>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function Methodology({ settings }: { settings: Settings }) {
   return (
     <section className="card p-3 text-xs text-gray-600">
       <h2 className="font-semibold text-sm text-gray-800">Metodología, fuentes y limitaciones</h2>
       <ul className="list-disc ml-4 mt-2 space-y-1">
         <li><b>Observados:</b> reportes locales de tormenta de NOAA/SPC (preliminares, puntos con hora UTC) y reportes NWS/NOAA compilados en la investigación inicial (nov-2024 a nov-2026). Granizo en pulgadas, viento en mph.</li>
-        <li><b>Estimados:</b> franjas de granizo ≥1.75" y porcentaje de cada ZIP con granizo estimado (≥1", ≥1.75", ≥2.5") de HailPoint por radar. No son mediciones en tierra y cubren las fechas descargadas de HailPoint.</li>
+        <li><b>Estimados:</b> franjas de granizo ≥1.75" y porcentaje de cada ZIP con granizo estimado (≥1", ≥1.75", ≥2.5"). Austin: HailPoint (fechas descargadas en la investigación). San Antonio: detecciones del radar NEXRAD de NOAA (índice de granizo; radio de 2.5 km alrededor de cada detección, tiende a sobrestimar). No son mediciones en tierra.</li>
         <li><b>ZIP:</b> contornos ZCTA del Censo simplificados (61 ZIP con contorno). Un reporte se asigna al ZIP cuyo contorno lo contiene.</li>
         <li><b>Storm Opportunity Score:</b> intensidad {settings.weights.intensidad}, frecuencia {settings.weights.frecuencia}, recencia {settings.weights.recencia}, resultados {settings.weights.resultados}, leads {settings.weights.leads}, cobertura {settings.weights.cobertura}. Intensidad usa fracciones del ZIP (no su tamaño) para no favorecer ZIP grandes. Las métricas comerciales usan solo los trabajos que tu usuario puede ver.</li>
         <li><b>Exposición de leads:</b> “Exposición potencial” = dentro de una franja de radar o reporte de granizo ≥1"/viento ≥58 mph a ≤1 mi. “Histórica cerca” = reporte a ≤3 mi o radar ≥1" en parte del ZIP. El daño solo se marca con inspección o reclamo aprobado en el CRM.</li>

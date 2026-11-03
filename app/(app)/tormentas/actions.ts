@@ -5,6 +5,8 @@ import { syncSpcRange } from "@/lib/storm-server";
 import { todayTX } from "@/lib/format";
 import { isUuid } from "@/lib/files";
 import { DEFAULT_WEIGHTS, type Weights } from "@/lib/storm";
+import { REGIONS } from "@/lib/regions";
+import { importNexrad, importZipOutlines } from "@/lib/region-server";
 
 type R<T = {}> = ({ ok: true } & T) | { ok: false; error: string };
 const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
@@ -105,4 +107,41 @@ export async function reviewAlert(id: string): Promise<R> {
   if (error) return { ok: false, error: "No se pudo marcar." };
   revalidatePath("/tormentas");
   return { ok: true };
+}
+
+// ---------------- Regiones (San Antonio, etc.) ----------------
+
+export async function importRegionZips(regionKey: string): Promise<R<{ added: number; found: number }>> {
+  const { supabase, profile } = await requireAdmin();
+  const region = REGIONS.find((r) => r.key === regionKey);
+  if (!region) return { ok: false, error: "Región no válida." };
+  try {
+    const r = await importZipOutlines(region);
+    await supabase.from("audit_logs").insert({ actor: profile.id, action: "importar", entity: "zip_boundaries", entity_id: region.key, details: r });
+    revalidatePath("/tormentas"); revalidatePath("/mapa");
+    return { ok: true, ...r };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("SUPABASE_SERVICE_ROLE_KEY") ? m : "El Censo no respondió. Intenta de nuevo en unos minutos." };
+  }
+}
+
+// Radar NEXRAD por tramos de 30 días desde la fecha indicada
+export async function importRegionRadar(regionKey: string, fromDate: string): Promise<R<{ next: string | null; to: string; swaths: number; stats: number }>> {
+  await requireAdmin();
+  const region = REGIONS.find((r) => r.key === regionKey);
+  if (!region) return { ok: false, error: "Región no válida." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) return { ok: false, error: "Fecha no válida." };
+  const last = addDays(todayTX(), -1);
+  const to = [addDays(fromDate, 29), last].sort()[0];
+  if (fromDate > to) return { ok: true, next: null, to: fromDate, swaths: 0, stats: 0 };
+  try {
+    const r = await importNexrad(region, fromDate, to);
+    revalidatePath("/tormentas"); revalidatePath("/mapa");
+    const next = addDays(to, 1);
+    return { ok: true, next: next <= last ? next : null, to, swaths: r.swaths, stats: r.stats };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("SUPABASE_SERVICE_ROLE_KEY") ? m : `NOAA no respondió para ${fromDate}–${to}. Puedes reanudar.` };
+  }
 }

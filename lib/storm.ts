@@ -256,9 +256,9 @@ export function hailZones(args: { zips: ZipInfo[]; stats: ZipStat[]; events: Sto
     const ev = events.filter((e) => e.event_type === "granizo" && (e.hail_in ?? 0) >= 1 && inPeriod(e.event_date, period) &&
       (e.zip === z.zip || (!e.zip && z.geom && inBbox(e.lat, e.lng, z.bbox) && pointInRing(e.lat, e.lng, z.geom))));
     if (!st.length && !ev.length) continue;
-    let radarMax = 0, frac175 = 0, frac1 = 0, radarDate: string | null = null;
+    let radarMax = 0, frac175 = 0, frac1 = 0, radarDate: string | null = null, radarSrc = "";
     for (const s of st) {
-      if (Number(s.max_hail_in) > radarMax) radarMax = Number(s.max_hail_in);
+      if (Number(s.max_hail_in) > radarMax) { radarMax = Number(s.max_hail_in); radarSrc = s.source_key; }
       if (Number(s.frac_1) > frac1) frac1 = Number(s.frac_1);
       if (Number(s.frac_175) > frac175 || (Number(s.frac_175) === frac175 && !radarDate)) { frac175 = Number(s.frac_175); radarDate = s.event_date; }
     }
@@ -272,7 +272,8 @@ export function hailZones(args: { zips: ZipInfo[]; stats: ZipStat[]; events: Sto
     const confirm = clamp(ev.length / 5);
     const score = Math.round(100 * (0.4 * size + 0.35 * extent + 0.25 * confirm));
     const reasons: string[] = [];
-    if (radarMax > 0) reasons.push(`Radar: hasta ${radarMax.toFixed(2)}" estimado${frac175 > 0 ? `; ${Math.round(frac175 * 100)}% del ZIP con ≥1.75"` : ""}${radarDate ? ` (${radarDate})` : ""}.`);
+    const srcName = radarSrc === "nexrad" ? "radar NOAA NEXRAD" : radarSrc === "hailpoint" ? "HailPoint" : "radar";
+    if (radarMax > 0) reasons.push(`Radar (${srcName}): hasta ${radarMax.toFixed(2)}" estimado${frac175 > 0 ? `; ${Math.round(frac175 * 100)}% del ZIP con ≥1.75"` : ""}${radarDate ? ` (${radarDate})` : ""}.`);
     if (ev.length) reasons.push(`${ev.length} reporte(s) de granizo ≥1" observados; máximo ${obsMax.toFixed(2)}"${big?.location_text ? ` en ${big.location_text}` : ""} (${big!.event_date}).`);
     const b = z.bbox;
     const target = big ? { lat: big.lat, lng: big.lng } : b ? { lat: (b[0] + b[2]) / 2, lng: (b[1] + b[3]) / 2 } : null;

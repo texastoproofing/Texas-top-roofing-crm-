@@ -80,3 +80,11 @@ test("zonas afectadas: ordena por granizo y respeta el período", async () => {
   assert.ok(r[0].score > r[1].score);
   assert.match(r[0].reasons[0], /60% del ZIP/);
 });
+
+test("NEXRAD: lee el CSV de NOAA SWDI y se detiene en el resumen", async () => {
+  const { parseSwdi } = await import("../lib/region-parse.ts");
+  const csv = "ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON\n2025-05-28T22:18:47Z,KEWX,U5,100,90,2,30.769,-98.137\n2025-05-28T22:20:00Z,KEWX,U5,100,90,x,30.7,-98.1\nsummary\ncount,2\n";
+  const r = parseSwdi(csv);
+  assert.equal(r.length, 1);
+  assert.deepEqual(r[0], { t: "2025-05-28T22:18:47Z", radar: "KEWX", cell: "U5", size: 2, lat: 30.769, lng: -98.137 });
+});

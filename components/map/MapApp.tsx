@@ -15,6 +15,7 @@ import {
   type NearbyRef, type RoutePayload,
 } from "@/app/(app)/mapa/actions";
 import type { Bounds, HailLayer } from "./LeafletMap";
+import { REGIONS, regionOfBbox } from "@/lib/regions";
 import { hailColor, hailZones, type HailZone, type StormEvent, type Swath, type ZipInfo, type ZipStat } from "@/lib/storm";
 
 type HailData = {
@@ -88,6 +89,7 @@ export function MapApp(props: {
   const [hailMonths, setHailMonths] = useState<string>("12");
   const [fitBox, setFitBox] = useState<{ bbox: number[]; key: number } | null>(null);
   const [selZone, setSelZone] = useState<string | null>(null);
+  const [region, setRegion] = useState<string>("todas");
   const [bg, setBg] = useState<{ geocoding: number; streets: number; msg: string | null }>({ geocoding: props.pendingGeocode, streets: props.territoriesPendingGeom.length, msg: null });
 
   // ---------------- Ruta del día ----------------
@@ -159,7 +161,8 @@ export function MapApp(props: {
     const d = new Date(props.today + "T12:00:00Z"); d.setUTCMonth(d.getUTCMonth() - Number(hailMonths));
     return { from: d.toISOString().slice(0, 10), to: props.today };
   }, [hailMonths, props.today]);
-  const zones = useMemo(() => hailZones({ zips: props.hail.zips, stats: props.hail.stats, events: props.hail.events as StormEvent[], period: hailPeriod }), [props.hail, hailPeriod]);
+  const zones = useMemo(() => hailZones({ zips: props.hail.zips, stats: props.hail.stats, events: props.hail.events as StormEvent[], period: hailPeriod })
+    .filter((z) => region === "todas" || regionOfBbox(z.bbox) === region), [props.hail, hailPeriod, region]);
   const assignedByZip = useMemo(() => new Map(props.hail.assigned.map((a) => [a.zip, a])), [props.hail.assigned]);
   const hailLayer: HailLayer | null = useMemo(() => {
     if (!showHail) return null;
@@ -334,6 +337,15 @@ export function MapApp(props: {
                 <button key={k} type="button" aria-pressed={hailMonths === k} onClick={() => setHailMonths(k)}
                   className={`chip py-1.5 ${hailMonths === k ? "bg-gray-900 text-white border-gray-900" : "bg-white"}`}>{l}</button>
               ))}
+              {showHail && (
+                <span className="flex flex-wrap gap-1.5 w-full">
+                  {[{ key: "todas", name: "Todas las regiones" }, ...REGIONS].map((r) => (
+                    <button key={r.key} type="button" aria-pressed={region === r.key}
+                      onClick={() => { setRegion(r.key); setSelZone(null); const reg = REGIONS.find((x) => x.key === r.key); if (reg) setFitBox({ bbox: reg.bbox, key: Date.now() }); }}
+                      className={`chip py-1.5 ${region === r.key ? "bg-red-700 text-white border-red-700" : "bg-white"}`}>{r.name}</button>
+                  ))}
+                </span>
+              )}
             </div>
             <div className="h-[58vh] lg:h-[calc(100vh-260px)] min-h-[320px]">
               <LeafletMap
@@ -363,7 +375,7 @@ export function MapApp(props: {
           <div className="px-4 lg:px-0 mt-3 lg:mt-0 space-y-3 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
             {sel && <PointCard p={sel} inRoute={routeIndex.has(sel.id)} onToggleRoute={() => toggleStop(sel.id)} onClose={() => setSelected(null)} />}
             {zoneSel && <ZoneCard z={zoneSel} rank={zones.indexOf(zoneSel)} assigned={assignedByZip.get(zoneSel.zip) ?? null} me={props.me} onClose={() => setSelZone(null)} />}
-            {showHail && <HailZonesList zones={zones} period={HAIL_PERIODS.find(([k]) => k === hailMonths)![1]} selected={selZone} assigned={assignedByZip} me={props.me} onGo={goZone} />}
+            {showHail && <HailZonesList zones={zones} period={`${HAIL_PERIODS.find(([k]) => k === hailMonths)![1]}${region !== "todas" ? ` · ${REGIONS.find((r) => r.key === region)?.name}` : ""}`} selected={selZone} assigned={assignedByZip} me={props.me} onGo={goZone} />}
             {selS && <StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
 
             <div className="flex items-center justify-between">
