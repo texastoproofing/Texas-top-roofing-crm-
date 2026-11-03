@@ -12,7 +12,7 @@ import { parseSpc, ymd, type Parsed } from "./spc";
 // El "día SPC" va de 12Z a 12Z: un reporte con hora < 1200 pertenece al día UTC siguiente.
 // ---------------------------------------------------------------------
 const SPC = "https://www.spc.noaa.gov/climo/reports/";
-const UA = "TexasTopRoofingCRM/1.0 (texastoproofingaustin@gmail.com)";
+const UA = "TexasTopRoofingCRM/1.0 (+https://texas-top-roofing-crm.vercel.app)";
 
 async function fetchText(url: string) {
   const ctrl = new AbortController();
@@ -43,11 +43,13 @@ function zipFor(lat: number, lng: number, zips: ZipInfo[]) {
 // Importa reportes SPC de un rango de días (fechas SPC). Devuelve conteos.
 export async function syncSpcRange(from: string, to: string, opts: { alerts: boolean; startedBy: string | null }) {
   const admin = createAdminClient();
-  const { data: settings } = await admin.from("storm_settings").select("*").eq("id", 1).single();
+  const { data: settings, error: setErr } = await admin.from("storm_settings").select("*").eq("id", 1).single();
+  if (setErr) throw new Error(`No se pudo leer la configuración con la llave de servicio (${setErr.message}). Revisa SUPABASE_SERVICE_ROLE_KEY en Vercel.`);
   const bbox: number[] = settings?.sync_bbox ?? [29.2, -98.9, 31.4, -96.9];
-  const { data: job } = await admin.from("storm_sync_jobs")
+  const { data: job, error: jobErr } = await admin.from("storm_sync_jobs")
     .insert({ source_key: "spc", range_start: from, range_end: to, status: "en_curso", started_by: opts.startedBy })
     .select("id").single();
+  if (jobErr) throw new Error(`No se pudo registrar la sincronización (${jobErr.message}). Revisa SUPABASE_SERVICE_ROLE_KEY en Vercel.`);
 
   const days: string[] = [];
   for (let d = new Date(from + "T00:00:00Z"); ymd(d) <= to; d.setUTCDate(d.getUTCDate() + 1)) days.push(ymd(d).slice(2).replace(/-/g, "") + "|" + ymd(d));

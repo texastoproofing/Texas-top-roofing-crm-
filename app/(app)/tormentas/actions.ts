@@ -26,7 +26,8 @@ export async function syncRecent(force = false): Promise<R<{ inserted: number; a
     if (r.status === "error") return { ok: false, error: "NOAA/SPC no respondió. Se reintentará más tarde." };
     return { ok: true, inserted: r.inserted, alerts: r.alerts };
   } catch (e) {
-    return { ok: false, error: (e as Error).message.includes("SUPABASE_SERVICE_ROLE_KEY") ? "Falta configurar la llave de servicio en Vercel." : "No se pudo actualizar desde NOAA/SPC." };
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("SUPABASE_SERVICE_ROLE_KEY") ? m : "No se pudo actualizar desde NOAA/SPC." };
   }
 }
 
@@ -43,8 +44,9 @@ export async function syncHistoryBatch(fromDate: string): Promise<R<{ next: stri
     revalidatePath("/tormentas");
     const next = addDays(to, 1);
     return { ok: true, next: next <= addDays(today, -5) ? next : null, inserted: r.inserted, to };
-  } catch {
-    return { ok: false, error: "No se pudo importar el historial." };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("SUPABASE_SERVICE_ROLE_KEY") ? m : "No se pudo importar el historial." };
   }
 }
 

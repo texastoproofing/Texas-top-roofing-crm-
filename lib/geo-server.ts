@@ -11,7 +11,7 @@ export type GeoResult =
   | { status: "sin_resultado" }
   | { status: "error"; error: string };
 
-const UA = "TexasTopRoofingCRM/1.0 (texastoproofingaustin@gmail.com)";
+const UA = "TexasTopRoofingCRM/1.0 (+https://texas-top-roofing-crm.vercel.app)";
 
 async function fetchJson(url: string, init: RequestInit = {}, ms = 12000) {
   const ctrl = new AbortController();
