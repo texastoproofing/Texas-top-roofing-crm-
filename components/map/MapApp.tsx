@@ -181,7 +181,7 @@ export function MapApp(props: {
     };
   }, [showHail, zones, props.hail, hailPeriod, assignedByZip, props.me]);
   const zoneSel = selZone ? zones.find((z) => z.zip === selZone) ?? null : null;
-  const goZone = (z: HailZone) => { setSelZone(z.zip); setSelected(null); setSelStreet(null); if (z.bbox) setFitBox({ bbox: z.bbox, key: Date.now() }); };
+  const goZone = (z: HailZone) => { setSelZone(z.zip); setSelected(null); setSelStreet(null); if (z.bbox) setFitBox({ bbox: z.bbox, key: Date.now() }); document.querySelector(".leaflet-container")?.scrollIntoView({ behavior: "smooth", block: "center" }); };
 
   const inView = (p: MapPoint) => !bounds || (p.lat! >= bounds.s && p.lat! <= bounds.n && p.lng! >= bounds.w && p.lng! <= bounds.e);
   const listItems = (onlyInView ? located.filter(inView) : located)
@@ -460,7 +460,8 @@ function HailZonesList({ zones, period, selected, assigned, me, onGo }: {
                     <span className="ml-auto text-xs font-bold text-red-800">{max.toFixed(2)}"</span>
                   </span>
                   <span className="block text-xs text-gray-600 mt-0.5 ml-8">
-                    {z.frac175 > 0 ? `${Math.round(z.frac175 * 100)}% del ZIP ≥1.75" (radar) · ` : ""}{z.reports} reporte(s) observados{z.lastDate ? ` · último ${fmtDate(z.lastDate)}` : ""}
+                    {z.frac175 > 0 ? `${Math.round(z.frac175 * 100)}% del ZIP ≥1.75" (radar) · ` : z.radarMax > 0 ? `Radar hasta ${z.radarMax.toFixed(2)}" · ` : ""}
+                    {z.reports ? `${z.reports} reporte(s) observados` : "sin reportes observados"}{z.lastDate ? ` · último ${fmtDate(z.lastDate)}` : ""}
                   </span>
                   {a && <span className={`block text-xs ml-8 font-semibold ${a.repId === me ? "text-gray-900" : "text-gray-500"}`}>{a.repId === me ? "Tu zona asignada" : `Asignada a ${a.repName ?? "otro vendedor"}`}</span>}
                 </button>
