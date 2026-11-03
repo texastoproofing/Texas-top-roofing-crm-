@@ -37,6 +37,7 @@ export type StreetIntel = {
   mySession: IntelSession | null;
   staff: boolean;
   loadedAt: string;
+  needsMigration: boolean;
 };
 
 export async function getStreetIntel(streetId: string): Promise<R<{ intel: StreetIntel }>> {
@@ -69,9 +70,16 @@ export async function getStreetIntel(streetId: string): Promise<R<{ intel: Stree
     bb ? supabase.from("storm_swaths").select("id, source_key, event_date, min_hail_in, geom, bbox") : Promise.resolve({ data: [] as any[] }),
     t?.zip ? supabase.from("zip_assignments").select("rep:profiles!zip_assignments_rep_id_fkey(full_name)").eq("zip", t.zip).is("ends_on", null) : Promise.resolve({ data: [] as any[] }),
   ]);
-  if (housesRes.error) return { ok: false, error: "No se pudieron leer las casas de la calle." };
-
-  const rows = (housesRes.data ?? []) as any[];
+  // Si la migración 0010 aún no está aplicada, se leen solo las columnas básicas para que el panel abra igual
+  let needsMigration = false;
+  let rows = (housesRes.data ?? []) as any[];
+  if (housesRes.error) {
+    const basic = await supabase.from("street_houses").select("id, house_number, situs, owner_name, owner_occupied, year_built")
+      .eq("street_id", streetId).order("house_number", { ascending: true, nullsFirst: false }).limit(1000);
+    if (basic.error) return { ok: false, error: "No se pudieron leer las casas de la calle." };
+    needsMigration = true;
+    rows = (basic.data ?? []).map((h: any) => ({ ...h, status: "not_visited" }));
+  }
   // Leads existentes con la misma dirección (para enlazar en vez de duplicar)
   const unlinked = rows.filter((h) => !h.job_id);
   const possible = new Map<string, { id: string; number: number }>();
@@ -125,7 +133,7 @@ export async function getStreetIntel(streetId: string): Promise<R<{ intel: Stree
       houses, counts, inspections, assigned, storms, priority,
       events: ((evRes.data ?? []) as any[]).map((e) => ({ id: e.id, houseId: e.house_id, sessionId: e.session_id, kind: e.kind, status: e.status, note: e.note, actor: one<any>(e.actor)?.full_name ?? null, at: e.created_at })),
       sessions, mySession: sessions.find((x) => x.userId === profile.id) ?? null,
-      staff: isStaff(profile), loadedAt: new Date().toISOString(),
+      staff: isStaff(profile), loadedAt: new Date().toISOString(), needsMigration,
     },
   };
 }

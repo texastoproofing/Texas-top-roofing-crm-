@@ -136,6 +136,11 @@ export function StreetPanel({ streetId, users, onClose, onFocus, onChanged, stre
     </div>
   ) : (
     <>
+      {intel.needsMigration && (
+        <p role="alert" className="mx-4 mb-2 rounded-xl bg-amber-50 text-amber-900 text-xs p-2.5">
+          Falta activar la base de datos de Street Intelligence (migración 0010). Puedes ver la calle, pero los estados, notas y recorridos no se guardarán todavía.
+        </p>
+      )}
       <Summary intel={intel} counts={counts} />
       <div className="px-4 sticky top-0 z-10 bg-white pt-1 pb-2 border-b border-line">
         <div className="seg w-full overflow-x-auto" role="tablist" aria-label="Secciones de la calle">
