@@ -86,7 +86,8 @@ export default async function MapaPage() {
   }
   const streets: MapStreet[] = (streetRes.data ?? []).map((s: any) => {
     const sv = lastStreetVisit.get(s.id);
-    const lv = s.last_visit_at ? new Date(s.last_visit_at).toISOString().slice(0, 10) : null;
+    // Fecha en hora de Texas (no UTC) para que coincida con la fecha de la visita
+    const lv = s.last_visit_at ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date(s.last_visit_at)) : null;
     return {
       id: s.id, name: s.name, territoryId: s.territory_id, territoryCode: territoryCode.get(s.territory_id) ?? "",
       status: s.status, lines: s.geom_status === "ok" && Array.isArray(s.geom) ? s.geom : [], geomStatus: s.geom_status,
