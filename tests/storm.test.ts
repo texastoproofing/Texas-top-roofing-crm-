@@ -95,7 +95,12 @@ test("dueños: nombre de calle, dirección del condado y nombre de persona", asy
   assert.equal(streetBase("Gage Park"), "GAGE PARK");
   const p = parseSitus("10323 IVY HORN \r\nSCHERTZ, TX 78154");
   assert.equal(p.number, 10323); assert.equal(p.street, "IVY HORN"); assert.equal(p.line, "10323 Ivy Horn, Schertz, TX 78154");
-  assert.ok(streetMatches("IVY HORN", "IVY HORN")); assert.ok(streetMatches("JAMIE LYN BLVD", "JAMIE LYN")); assert.ok(!streetMatches("IVY HORNET", "IVY HORN"));
+  assert.ok(streetMatches("IVY HORN", "Ivy Horn")); assert.ok(streetMatches("JAMIE LYN BLVD", "Jamie Lyn Boulevard")); assert.ok(!streetMatches("IVY HORNET", "Ivy Horn"));
+  assert.ok(streetMatches("ALAMO BND", "Alamo Bound")); assert.ok(streetMatches("CHAMPIONS CORNER DR", "Champions Corner Drive"));
+  const w = parseSitus("2613 CHAMPIONS CORNER DR, LEANDER, TX  78641");
+  assert.equal(w.street, "CHAMPIONS CORNER DR"); assert.equal(w.line, "2613 Champions Corner Dr, Leander, TX 78641");
+  const t = parseSitus("  3003 BLAZNGSTR TRL   TX 78613");
+  assert.equal(t.number, 3003); assert.equal(t.street, "BLAZNGSTR TRL");
   assert.deepEqual(ownerToPerson("SMITH JOHN A & MARY B"), { first: "John", last: "Smith" });
   assert.equal(ownerToPerson("PROGRESS RESIDENTIAL BORROWER 6 LLC"), null);
 });

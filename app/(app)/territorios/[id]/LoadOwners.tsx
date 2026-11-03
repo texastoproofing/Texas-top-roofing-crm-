@@ -26,7 +26,7 @@ export function LoadOwners({ territoryId, pending }: { territoryId: string; pend
       <button type="button" className="btn-secondary" disabled={busy} onClick={run}>
         {busy ? "Cargando dueños…" : pending ? `Cargar dueños del condado (${pending} calles)` : "Actualizar dueños"}
       </button>
-      <p className="text-xs text-gray-500">Registro público del distrito de tasación de Bexar: dirección, dueño y si es su residencia (homestead).</p>
+      <p className="text-xs text-gray-500">Registro público del distrito de tasación (Bexar, Williamson o Travis): dirección, dueño y si es su residencia.</p>
       {msg && <p className="text-sm" role="status">{msg}</p>}
     </div>
   );

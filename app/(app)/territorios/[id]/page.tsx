@@ -25,7 +25,6 @@ export default async function TerritoryPage({ params }: { params: { id: string }
   const housesBy = new Map<string, any[]>();
   for (const h of (hs ?? []) as any[]) { if (!housesBy.has(h.street_id)) housesBy.set(h.street_id, []); housesBy.get(h.street_id)!.push(h); }
   const ownersPending = streets.filter((s) => !s.owners_loaded_at).length;
-  const isBexar = String(z.code).startsWith("S");
   const done = streets.filter((s) => s.status === "terminada").length;
 
   return (
@@ -40,7 +39,7 @@ export default async function TerritoryPage({ params }: { params: { id: string }
       </div>
       {z.description && <p className="text-sm text-gray-700 mb-3">{z.description}</p>}
       <p className="text-sm font-semibold mb-4">{done} de {streets.length} calles terminadas</p>
-      {profile.role === "administrador" && isBexar && <LoadOwners territoryId={z.id} pending={ownersPending} />}
+      {profile.role === "administrador" && <LoadOwners territoryId={z.id} pending={ownersPending} />}
 
       <ul className="space-y-3">
         {streets.map((s) => {
