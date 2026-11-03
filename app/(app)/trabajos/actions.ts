@@ -56,6 +56,14 @@ export async function createJob(fd: FormData) {
     contactId = c.id;
   }
 
+  // Casa del registro del condado: si ya tiene lead, abrir ese en vez de duplicar
+  const houseId = str(fd, "house_id");
+  if (houseId) {
+    const { data: h } = await supabase.from("street_houses").select("job_id, status").eq("id", houseId).maybeSingle();
+    if (h?.status === "do_not_contact") throw new Error("Esta casa está marcada como No contactar.");
+    if (h?.job_id) redirect(`/trabajos/${h.job_id}`);
+  }
+
   const row = jobFromForm(fd);
   if (!row.sales_rep_id) row.sales_rep_id = profile.id;
   if (!row.name) {
@@ -83,6 +91,11 @@ export async function createJob(fd: FormData) {
       location: [row.address, row.city, row.zip].filter(Boolean).join(", ") || null,
       assigned_to: row.sales_rep_id, job_id: data.id, contact_id: contactId,
     });
+  }
+
+  if (houseId) {
+    await supabase.rpc("link_house_job", { p_house: houseId, p_job: data.id, p_kind: "lead" });
+    if (appt) await supabase.rpc("link_house_job", { p_house: houseId, p_job: data.id, p_kind: "appointment" });
   }
 
   revalidatePath("/trabajos");

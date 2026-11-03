@@ -40,6 +40,17 @@ const P: Record<string, string> = {
   sidebar: "M9 3v18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 0v6h6",
   camera: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3ZM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+  circle: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+  ban: "M4.9 4.9l14.2 14.2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+  navigation: "m3 11 19-9-9 19-2-8-8-2Z",
+  play: "m6 4 14 8-14 8V4Z",
+  skip: "m5 4 10 8-10 8V4Zm14 1v14",
+  flag: "M4 22V4m0 0h13l-2 4 2 4H4",
+  maximize: "M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7",
+  minimize: "M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7",
+  refresh: "M21 12a9 9 0 1 1-3-6.7L21 8m0-5v5h-5",
+  user: "M20 21v-1a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v1m8-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+  wind: "M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7",
 };
 export type IconName = keyof typeof P | string;
 export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75 }: { name: IconName; className?: string; strokeWidth?: number }) {

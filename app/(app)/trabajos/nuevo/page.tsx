@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSession, listProfiles } from "@/lib/auth";
 import { SOURCES, STAGES, STATUSES } from "@/lib/constants";
 import { fullName } from "@/lib/format";
@@ -30,9 +31,13 @@ export default async function NewJob({ searchParams }: { searchParams: { contact
   // Casa con dueño (registro del condado): llena dirección y nombre si el dueño es una persona
   let owner: { first: string; last: string } | null = null;
   let ownerRaw: string | null = null;
+  let houseId: string | null = null;
+  let houseJob: string | null = null;
+  let houseDnc = false;
   if (searchParams.casa && streetId) {
-    const { data: h } = await supabase.from("street_houses").select("situs, owner_name, street_id").eq("id", searchParams.casa).maybeSingle();
+    const { data: h } = await supabase.from("street_houses").select("id, situs, owner_name, street_id, job_id, status").eq("id", searchParams.casa).maybeSingle();
     if (h && h.street_id === streetId) {
+      houseId = h.id; houseJob = h.job_id; houseDnc = h.status === "do_not_contact";
       const [line] = String(h.situs).split(",");
       prefill.address = line;
       owner = ownerToPerson(h.owner_name);
@@ -45,8 +50,13 @@ export default async function NewJob({ searchParams }: { searchParams: { contact
   return (
     <>
       <PageHeader title="Nuevo lead" sub="Cliente y trabajo" back={{ href: "/trabajos", label: "Trabajos" }} />
+      {houseJob && (
+        <p className="card p-3 mb-4 text-sm bg-amber-50 border-amber-200">Esta casa ya tiene un lead. <Link href={`/trabajos/${houseJob}`} className="link font-semibold">Abrir el lead existente</Link> en vez de crear otro.</p>
+      )}
+      {houseDnc && <p className="card p-3 mb-4 text-sm bg-red-50 border-red-200 text-red-800 font-semibold">Esta casa está marcada como No contactar.</p>}
       <form action={createJob} className="space-y-5">
         {streetId && <input type="hidden" name="street_id" value={streetId} />}
+        {houseId && <input type="hidden" name="house_id" value={houseId} />}
         <section className="card p-4 space-y-4">
           <h2 className="h2">Cliente</h2>
           {contact ? (

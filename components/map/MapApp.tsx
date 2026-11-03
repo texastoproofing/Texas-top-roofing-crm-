@@ -15,6 +15,7 @@ import {
   type NearbyRef, type RoutePayload,
 } from "@/app/(app)/mapa/actions";
 import type { Bounds, HailLayer } from "./LeafletMap";
+import { StreetPanel } from "./StreetPanel";
 import { REGIONS, regionOfBbox } from "@/lib/regions";
 import { hailColor, hailZones, type HailZone, type StormEvent, type Swath, type ZipInfo, type ZipStat } from "@/lib/storm";
 
@@ -67,6 +68,7 @@ export function MapApp(props: {
   me: string; staff: boolean; points: MapPoint[]; streets: MapStreet[]; territories: Territory[];
   users: { id: string; name: string }[]; pendingGeocode: number; territoriesPendingGeom: string[];
   initialRoute: Route | null; today: string; tileUrl: string; tileAttribution: string; hail: HailData;
+  initialStreet?: string | null;
 }) {
   const { points, streets, territories, users, staff } = props;
   const router = useRouter();
@@ -81,7 +83,7 @@ export function MapApp(props: {
   const [onlyInView, setOnlyInView] = useState(true);
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [selStreet, setSelStreet] = useState<string | null>(null);
+  const [selStreet, setSelStreet] = useState<string | null>(props.initialStreet ?? null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; zoom?: number; key: number } | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
   const [picked, setPicked] = useState<LatLng | null>(null);
@@ -184,7 +186,7 @@ export function MapApp(props: {
     };
   }, [showHail, zones, props.hail, hailPeriod, assignedByZip, props.me]);
   const zoneSel = selZone ? zones.find((z) => z.zip === selZone) ?? null : null;
-  const detailKey = `${selected ?? ""}|${selStreet ?? ""}`;
+  const detailKey = `${selected ?? ""}|`;
   useEffect(() => {
     if (detailKey === "|" || typeof window === "undefined" || window.innerWidth >= 1024) return;
     document.getElementById("map-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -198,6 +200,15 @@ export function MapApp(props: {
   const fitKey = `${groups.join()}|${rep}|${zone}|${visitF}|${ql}|${showStreets}|${located.length}`;
   const sel = selected ? byId.get(selected) ?? null : null;
   const selS = selStreet ? streets.find((s) => s.id === selStreet) ?? null : null;
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current || !props.initialStreet || !selS?.lines.length) return;
+    const pts = selS.lines.flat();
+    const bbox = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+    // Espera a que el mapa termine su primer encuadre
+    const t = setTimeout(() => { deepLinked.current = true; setFitBox({ bbox, key: Date.now() }); }, 900);
+    return () => clearTimeout(t);
+  }, [props.initialStreet, selS]);
 
   const selectPoint = useCallback((id: string, fly = false) => {
     setSelected(id); setSelStreet(null);
@@ -380,7 +391,6 @@ export function MapApp(props: {
           <div className="px-4 lg:px-0 mt-3 lg:mt-0 space-y-3 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
             <div id="map-detail" className="space-y-3 scroll-mt-20">
               {sel && <PointCard p={sel} inRoute={routeIndex.has(sel.id)} onToggleRoute={() => toggleStop(sel.id)} onClose={() => setSelected(null)} />}
-              {selS && <StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
               {zoneSel && <ZoneCard z={zoneSel} rank={zones.indexOf(zoneSel)} assigned={assignedByZip.get(zoneSel.zip) ?? null} me={props.me} onClose={() => setSelZone(null)} />}
             </div>
             {showHail && <HailZonesList zones={zones} period={`${HAIL_PERIODS.find(([k]) => k === hailMonths)![1]}${region !== "todas" ? ` · ${REGIONS.find((r) => r.key === region)?.name}` : ""}`} selected={selZone} assigned={assignedByZip} me={props.me} onGo={goZone} />}
@@ -436,6 +446,19 @@ export function MapApp(props: {
           items={toReview}
           onPick={(id) => { setPickFor(id); setPicked(null); setTab("mapa"); }}
           onChanged={() => router.refresh()}
+        />
+      )}
+      {selS && tab === "mapa" && (
+        <StreetPanel
+          streetId={selS.id}
+          users={users}
+          onClose={() => setSelStreet(null)}
+          onChanged={() => router.refresh()}
+          onFocus={(f) => {
+            if ("bbox" in f) setFitBox({ bbox: f.bbox, key: Date.now() });
+            else setFocus({ lat: f.lat, lng: f.lng, zoom: 15, key: Date.now() });
+          }}
+          streetVisitForm={<StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
         />
       )}
     </div>

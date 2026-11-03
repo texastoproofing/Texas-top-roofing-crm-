@@ -1,3 +1,5 @@
+import { StatusPill } from "@/components/HouseStatus";
+import { isHouseStatus } from "@/lib/street-intel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -22,7 +24,7 @@ export default async function TerritoryPage({ params }: { params: { id: string }
     .eq("territory_id", z.id).order("position");
   const streets = (data ?? []) as any[];
   const { data: hs } = streets.length ? await supabase.from("street_houses")
-    .select("id, street_id, house_number, situs, owner_name, owner_occupied, year_built")
+    .select("id, street_id, house_number, situs, owner_name, owner_occupied, year_built, status, job_id")
     .in("street_id", streets.map((s) => s.id)).order("house_number").limit(5000) : { data: [] as any[] };
   const housesBy = new Map<string, any[]>();
   for (const h of (hs ?? []) as any[]) { if (!housesBy.has(h.street_id)) housesBy.set(h.street_id, []); housesBy.get(h.street_id)!.push(h); }
@@ -69,6 +71,9 @@ export default async function TerritoryPage({ params }: { params: { id: string }
                 <Link href={`/trabajos/nuevo?calle=${s.id}`} className="btn-primary px-1 btn-sm min-h-[44px]">+ Lead</Link>
                 <a href={mapsHref([s.name, z.city, "TX", z.zip])} target="_blank" rel="noopener" className="btn-secondary px-1 btn-sm min-h-[44px]"><Icon name="route" className="w-4 h-4" />Ir</a>
               </div>
+              <Link href={`/mapa?calle=${s.id}`} className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-night text-white text-sm font-semibold min-h-[44px]">
+                <Icon name="streets" className="w-4 h-4" />Abrir calle en el mapa (casas, recorrido, tormentas)
+              </Link>
               {(housesBy.get(s.id)?.length ?? 0) > 0 && (
                 <details className="mt-2">
                   <summary className="text-sm font-medium text-muted cursor-pointer">Casas y dueños ({housesBy.get(s.id)!.length})</summary>
@@ -81,7 +86,12 @@ export default async function TerritoryPage({ params }: { params: { id: string }
                             {h.owner_occupied ? "Vive ahí" : "Dueño no vive ahí (posible renta)"}{h.year_built ? ` · construida ${h.year_built}` : ""}
                           </span>
                         </span>
-                        <Link href={`/trabajos/nuevo?calle=${s.id}&casa=${h.id}`} className="text-xs font-bold text-brand shrink-0 py-1">+ Lead</Link>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {isHouseStatus(h.status) && h.status !== "not_visited" && <StatusPill s={h.status} small />}
+                          {h.job_id ? <Link href={`/trabajos/${h.job_id}`} className="text-xs font-bold text-ink py-1">Ver lead</Link>
+                            : h.status === "do_not_contact" ? null
+                            : <Link href={`/trabajos/nuevo?calle=${s.id}&casa=${h.id}`} className="text-xs font-bold text-brand py-1">+ Lead</Link>}
+                        </span>
                       </li>
                     ))}
                   </ul>
