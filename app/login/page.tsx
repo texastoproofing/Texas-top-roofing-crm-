@@ -15,7 +15,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
         </div>
         <p className="text-xs text-white/40">Austin · San Antonio</p>
       </section>
-      <section className="flex flex-col lg:items-center lg:justify-center lg:px-4 lg:py-10">
+      <section className="min-h-screen lg:min-h-0 flex flex-col bg-white lg:bg-transparent lg:items-center lg:justify-center lg:px-4 lg:py-10">
         <div className="lg:hidden relative overflow-hidden bg-gradient-to-br from-night via-night-2 to-[#3a0d10] px-6 pt-[calc(env(safe-area-inset-top)+40px)] pb-14 text-center">
           <div className="pointer-events-none absolute -right-12 -top-12 w-48 h-48 rounded-full bg-brand/30 blur-2xl" aria-hidden />
           {/* eslint-disable-next-line @next/next/no-img-element */}
