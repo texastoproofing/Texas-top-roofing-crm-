@@ -34,7 +34,7 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
   const { count: fileCount } = await supabase.from("job_files").select("id", { count: "exact", head: true }).eq("job_id", j.id);
   const active = users.filter((u) => u.active);
   const addr = [j.address ?? c?.address, j.city ?? c?.city, j.zip ?? c?.zip].filter(Boolean);
-  const map = mapsHref([...addr, "TX"]);
+  const map = addr.length ? mapsHref([...addr, "TX"]) : undefined;
   const st = statusInfo(j.status);
 
   return (

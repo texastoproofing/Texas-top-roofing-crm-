@@ -32,6 +32,7 @@ type QueueItem = {
   status: "esperando" | "subiendo" | "guardando" | "listo" | "error";
   progress: number;
   error?: string;
+  retryable?: boolean;
 };
 
 const EMPTY_TEXT = "Agrega fotos y documentos para respaldar este trabajo y sus suplementos.";
@@ -105,8 +106,8 @@ export function JobFiles({ jobId, files, me, canDeleteAny }: {
 
   async function runUpload(item: QueueItem) {
     const v = validateFile(item.file.name, item.file.type, item.file.size);
-    if (!v.ok) { patch(item.key, { status: "error", error: v.error }); return; }
-    patch(item.key, { status: "subiendo", progress: 0, error: undefined });
+    if (!v.ok) { patch(item.key, { status: "error", error: v.error, retryable: false }); return; }
+    patch(item.key, { status: "subiendo", progress: 0, error: undefined, retryable: true });
 
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -151,30 +152,6 @@ export function JobFiles({ jobId, files, me, canDeleteAny }: {
 
   return (
     <div className="space-y-5">
-      {/* Resumen de lo cargado */}
-      <section className="card p-4">
-        <h2 className="h2 mb-3">Resumen de archivos cargados</h2>
-        <ul className="grid sm:grid-cols-2 gap-2">
-          {FILE_CATEGORIES.filter((c) => c.key !== "otros").map((c) => {
-            const n = counts[c.key] ?? 0;
-            return (
-              <li key={c.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${n ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${n ? "bg-green-600 text-white" : "bg-white border border-gray-300 text-gray-400"}`}>
-                  {n ? "✓" : "–"}
-                </span>
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm">{c.label}</div>
-                  <div className="text-xs text-gray-600">{n ? `${n} archivo${n === 1 ? "" : "s"} cargado${n === 1 ? "" : "s"}` : "Sin archivos cargados"}</div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="text-xs text-gray-500 mt-3">
-          Este resumen solo muestra qué se ha cargado. No confirma que la evidencia sea suficiente ni que los documentos estén revisados o validados.
-        </p>
-      </section>
-
       {/* Carga */}
       <section className="card p-4 space-y-3">
         <div>
@@ -225,7 +202,9 @@ export function JobFiles({ jobId, files, me, canDeleteAny }: {
                   <div className="mt-1">
                     <p className="text-red-700">{it.error}</p>
                     <div className="flex gap-2 mt-2">
-                      <button type="button" className="btn-secondary min-h-[36px] px-3" onClick={() => runUpload(it)}>Reintentar</button>
+                      {it.retryable !== false && (
+                        <button type="button" className="btn-secondary min-h-[36px] px-3" onClick={() => runUpload(it)}>Reintentar</button>
+                      )}
                       <button type="button" className="btn-ghost min-h-[36px] px-3" onClick={() => setQueue((q) => q.filter((x) => x.key !== it.key))}>Quitar</button>
                     </div>
                   </div>
@@ -234,6 +213,30 @@ export function JobFiles({ jobId, files, me, canDeleteAny }: {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Resumen de lo cargado */}
+      <section className="card p-4">
+        <h2 className="h2 mb-3">Resumen de archivos cargados</h2>
+        <ul className="grid sm:grid-cols-2 gap-2">
+          {FILE_CATEGORIES.filter((c) => c.key !== "otros").map((c) => {
+            const n = counts[c.key] ?? 0;
+            return (
+              <li key={c.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${n ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${n ? "bg-green-600 text-white" : "bg-white border border-gray-300 text-gray-400"}`}>
+                  {n ? "✓" : "–"}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm">{c.label}</div>
+                  <div className="text-xs text-gray-600">{n ? `${n} archivo${n === 1 ? "" : "s"} cargado${n === 1 ? "" : "s"}` : "Sin archivos cargados"}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="text-xs text-gray-500 mt-3">
+          Este resumen solo muestra qué se ha cargado. No confirma que la evidencia sea suficiente ni que los documentos estén revisados o validados.
+        </p>
       </section>
 
       {notice && (
@@ -415,7 +418,7 @@ function Lightbox({ list, id, onClose, onMove, me, canDeleteAny, onError, onDone
 
   if (!f) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 text-white flex flex-col" role="dialog" aria-modal="true" aria-label={f.file_name}>
+    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col" role="dialog" aria-modal="true" aria-label={f.file_name}>
       <div className="flex items-center justify-between gap-2 px-3 h-14 shrink-0">
         <span className="text-sm truncate">{idx + 1} / {list.length} · {f.file_name}</span>
         <button type="button" className="btn min-h-[40px] px-3 bg-white/10 hover:bg-white/20" onClick={onClose}>Cerrar</button>
