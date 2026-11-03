@@ -14,14 +14,23 @@ export function HailpointReceiver() {
   const [running, setRunning] = useState(false);
 
   useEffect(() => {
+    // 1) Llegan los datos en #hp=...: se guardan en sessionStorage y se recarga sin el fragmento
+    //    (una dirección tan larga no puede viajar en las peticiones al servidor).
     const h = window.location.hash;
-    if (!h.startsWith("#hp=")) return;
+    if (h.startsWith("#hp=")) {
+      try { sessionStorage.setItem("ttr-hp", decodeURIComponent(h.slice(4))); } catch { setErr("No se pudieron recibir los datos."); return; }
+      window.location.replace(window.location.pathname);
+      return;
+    }
+    // 2) Página limpia: leer los datos guardados
+    let raw: string | null = null;
+    try { raw = sessionStorage.getItem("ttr-hp"); } catch {}
+    if (!raw) return;
     try {
-      const data = JSON.parse(decodeURIComponent(h.slice(4)));
+      const data = JSON.parse(raw);
       if (!Array.isArray(data)) throw new Error();
       setMaps(data.filter((m: any) => m && typeof m.id === "string" && typeof m.date === "string" && Array.isArray(m.polygons)));
     } catch { setErr("Los datos recibidos no son válidos."); }
-    history.replaceState(null, "", window.location.pathname); // no dejar los datos en la dirección
   }, []);
 
   async function run() {
@@ -34,6 +43,7 @@ export function HailpointReceiver() {
     }
     setRunning(false);
     setMaps(null);
+    try { sessionStorage.removeItem("ttr-hp"); } catch {}
   }
 
   return (
