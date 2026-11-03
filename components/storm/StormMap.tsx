@@ -77,10 +77,10 @@ export default function StormMap({ layers, swaths, events, zips, leads, fitKey, 
     }
     for (const e of events) {
       if ((e.type === "granizo" && !layers.hail) || (e.type === "viento" && !layers.wind)) continue;
-      const r = e.type === "granizo" ? 4 + Math.min(8, (e.size ?? 1) * 3) : 6;
+      const r = e.type === "granizo" ? 3 + Math.min(5, (e.size ?? 1) * 1.5) : 4;
       L.circleMarker([e.lat, e.lng], {
-        radius: r, weight: 2, color: "#fff",
-        fillColor: e.type === "granizo" ? "#111827" : "#2563eb", fillOpacity: 0.9,
+        radius: r, weight: 1, color: "#fff",
+        fillColor: e.type === "granizo" ? "#111827" : "#2563eb", fillOpacity: 0.85,
       }).bindTooltip(esc(e.label)).on("click", () => cb.current.onEvent(e.id)).addTo(s.evL);
     }
     if (layers.leads) {

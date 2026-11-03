@@ -43,7 +43,10 @@ export function StormApp(props: {
   const ini = props.initial;
 
   // ---------- Filtros (se guardan en el enlace para compartir la vista) ----------
-  const [tab, setTab] = useState<Tab>((ini.tab as Tab) || "panel");
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = ini.tab === "zip" ? "zips" : ini.tab;
+    return (["panel", "mapa", "zips", "leads", "eventos", "alertas", "ajustes"] as string[]).includes(t ?? "") ? (t as Tab) : "panel";
+  });
   const [preset, setPreset] = useState(ini.periodo || "730");
   const [from, setFrom] = useState(ini.desde || "");
   const [to, setTo] = useState(ini.hasta || "");
@@ -584,7 +587,8 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
   const [w, setW] = useState<Weights>(settings.weights);
   const [hail, setHail] = useState(String(settings.alert_min_hail_in));
   const [wind, setWind] = useState(String(settings.alert_min_wind_mph));
-  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; t: string; at: "pesos" | "zip" | "sync" } | null>(null);
+  const Msg = ({ at }: { at: "pesos" | "zip" | "sync" }) => msg && msg.at === at ? <p className={`text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>{msg.t}</p> : null;
   const [aZip, setAZip] = useState(""); const [aRep, setARep] = useState(""); const [aDate, setADate] = useState(today);
   const [hist, setHist] = useState<{ running: boolean; at: string | null; inserted: number; err: string | null }>({ running: false, at: null, inserted: 0, err: null });
   const [pending, start] = useTransition();
@@ -622,9 +626,9 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
         </div>
         <button type="button" className="btn-primary" disabled={pending} onClick={() => start(async () => {
           const r = await saveStormSettings({ weights: w, alert_min_hail_in: Number(hail), alert_min_wind_mph: Number(wind) });
-          setMsg(r.ok ? { ok: true, t: "Guardado." } : { ok: false, t: r.error }); if (r.ok) router.refresh();
+          setMsg(r.ok ? { ok: true, t: "Guardado.", at: "pesos" } : { ok: false, t: r.error, at: "pesos" }); if (r.ok) router.refresh();
         })}>Guardar</button>
-        {msg && <p className={`text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>{msg.t}</p>}
+        <Msg at="pesos" />
       </section>
 
       <section className="card p-3 space-y-2">
@@ -639,14 +643,15 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
           <input type="date" className="input" value={aDate} onChange={(e) => setADate(e.target.value)} />
           <button type="button" className="btn-primary" disabled={pending} onClick={() => start(async () => {
             const r = await assignZip({ zip: aZip, repId: aRep, startsOn: aDate });
-            setMsg(r.ok ? { ok: true, t: `ZIP ${aZip} asignado.` } : { ok: false, t: r.error }); if (r.ok) { setAZip(""); router.refresh(); }
+            setMsg(r.ok ? { ok: true, t: `ZIP ${aZip} asignado.`, at: "zip" } : { ok: false, t: r.error, at: "zip" }); if (r.ok) { setAZip(""); router.refresh(); }
           })}>Asignar</button>
         </div>
+        <Msg at="zip" />
         <ul className="divide-y divide-gray-100 text-sm">
           {assignments.map((a) => (
             <li key={a.id} className="py-2 flex justify-between gap-2">
               <span><b>{a.zip}</b> · {a.rep_name} · desde {fmtDate(a.starts_on)}{a.ends_on ? ` hasta ${fmtDate(a.ends_on)}` : " (activa)"}</span>
-              {!a.ends_on && <button type="button" className="text-xs text-red-600" onClick={() => start(async () => { await endAssignment(a.id); router.refresh(); })}>Terminar</button>}
+              {!a.ends_on && <button type="button" className="text-xs text-red-600" onClick={() => start(async () => { const r = await endAssignment(a.id); setMsg(r.ok ? { ok: true, t: `Asignación de ${a.zip} terminada.`, at: "zip" } : { ok: false, t: r.error, at: "zip" }); router.refresh(); })}>Terminar</button>}
             </li>
           ))}
           {assignments.length === 0 && <li className="muted py-2">Sin asignaciones.</li>}
@@ -658,12 +663,13 @@ function SettingsTab({ settings, assignments, users, syncJobs, zips, today }: {
         <p className="text-xs text-gray-500">Reportes preliminares de granizo y viento en el área San Antonio–Temple. Se actualizan solos al abrir esta página (cada 6 h como máximo).</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary" disabled={pending} onClick={() => start(async () => {
-            const r = await syncRecent(true); setMsg(r.ok ? { ok: true, t: `Listo: ${r.inserted} reporte(s) nuevo(s), ${r.alerts} alerta(s).` } : { ok: false, t: r.error }); router.refresh();
+            const r = await syncRecent(true); setMsg(r.ok ? { ok: true, t: `Listo: ${r.inserted} reporte(s) nuevo(s), ${r.alerts} alerta(s).`, at: "sync" } : { ok: false, t: r.error, at: "sync" }); router.refresh();
           })}>Actualizar ahora</button>
           <button type="button" className="btn-secondary" disabled={hist.running} onClick={runHistory}>
             {hist.running ? `Importando… ${hist.at ?? ""}` : `Importar historial desde ${fmtDate(settings.history_start)}`}
           </button>
         </div>
+        <Msg at="sync" />
         {(hist.inserted > 0 || hist.err || hist.running) && (
           <p className={`text-sm ${hist.err ? "text-red-700" : "text-gray-700"}`}>{hist.err ?? `${hist.inserted} reporte(s) importados hasta ${hist.at}.`}{!hist.running && !hist.err && hist.at ? " Terminado." : ""}</p>
         )}
