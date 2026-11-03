@@ -472,7 +472,7 @@ function HailZonesList({ zones, period, selected, assigned, me, onGo }: {
                     <span className="ml-auto text-xs font-bold text-red-800">{max.toFixed(2)}"</span>
                   </span>
                   <span className="block text-xs text-gray-600 mt-0.5 ml-8">
-                    {z.frac175 > 0 ? `${Math.round(z.frac175 * 100)}% del ZIP ≥1.75" (radar) · ` : z.radarMax > 0 ? `Radar hasta ${z.radarMax.toFixed(2)}" · ` : ""}
+                    {z.frac175 > 0 ? `${z.frac175 < 0.01 ? "<1" : Math.round(z.frac175 * 100)}% del ZIP ≥1.75" (radar) · ` : z.radarMax > 0 ? `Radar hasta ${z.radarMax.toFixed(2)}" · ` : ""}
                     {z.reports ? `${z.reports} reporte(s) observados` : "sin reportes observados"}{z.lastDate ? ` · último ${fmtDate(z.lastDate)}` : ""}
                   </span>
                   {a && <span className={`block text-xs ml-8 font-semibold ${a.repId === me ? "text-gray-900" : "text-gray-500"}`}>{a.repId === me ? "Tu zona asignada" : `Asignada a ${a.repName ?? "otro vendedor"}`}</span>}

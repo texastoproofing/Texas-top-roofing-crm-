@@ -273,7 +273,7 @@ export function hailZones(args: { zips: ZipInfo[]; stats: ZipStat[]; events: Sto
     const score = Math.round(100 * (0.4 * size + 0.35 * extent + 0.25 * confirm));
     const reasons: string[] = [];
     const srcName = radarSrc === "nexrad" ? "radar NOAA NEXRAD" : radarSrc === "hailpoint" ? "HailPoint" : "radar";
-    if (radarMax > 0) reasons.push(`Radar (${srcName}): hasta ${radarMax.toFixed(2)}" estimado${frac175 > 0 ? `; ${Math.round(frac175 * 100)}% del ZIP con ≥1.75"` : ""}${radarDate ? ` (${radarDate})` : ""}.`);
+    if (radarMax > 0) reasons.push(`Radar (${srcName}): hasta ${radarMax.toFixed(2)}" estimado${frac175 > 0 ? `; ${frac175 < 0.01 ? "<1" : Math.round(frac175 * 100)}% del ZIP con ≥1.75"` : ""}${radarDate ? ` (${radarDate})` : ""}.`);
     if (ev.length) reasons.push(`${ev.length} reporte(s) de granizo ≥1" observados; máximo ${obsMax.toFixed(2)}"${big?.location_text ? ` en ${big.location_text}` : ""} (${big!.event_date}).`);
     const b = z.bbox;
     const target = big ? { lat: big.lat, lng: big.lng } : b ? { lat: (b[0] + b[2]) / 2, lng: (b[1] + b[3]) / 2 } : null;
