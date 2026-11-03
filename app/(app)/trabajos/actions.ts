@@ -128,3 +128,24 @@ export async function deleteJob(id: string) {
   revalidatePath("/trabajos");
   redirect("/trabajos");
 }
+
+// Autorización del cliente para usar su trabajo como referencia comercial (apagada por defecto)
+export async function setReferenceAuthorization(id: string, fd: FormData) {
+  const { supabase, profile } = await getSession();
+  const authorized = fd.get("authorized") === "on";
+  const note = str(fd, "reference_note");
+  const { error } = await supabase.from("jobs").update({
+    reference_authorized: authorized,
+    reference_authorized_at: authorized ? new Date().toISOString() : null,
+    reference_authorized_by: authorized ? profile.id : null,
+    reference_note: note,
+  }).eq("id", id);
+  if (error) throw new Error(error.message);
+  if (authorized) {
+    await supabase.from("activities").insert({
+      job_id: id, author_id: profile.id, kind: "sistema",
+      body: "El cliente autorizó usar este trabajo como referencia comercial." + (note ? ` Nota: ${note}` : ""),
+    });
+  }
+  revalidatePath(`/trabajos/${id}`);
+}

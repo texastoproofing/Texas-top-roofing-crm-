@@ -12,7 +12,8 @@ export default async function TerritoriesPage() {
 
   return (
     <>
-      <PageHeader title="Calles door-to-door" sub="Zonas por prioridad dentro de la franja de granizo del radar" />
+      <PageHeader title="Calles door-to-door" sub="Zonas por prioridad dentro de la franja de granizo del radar"
+        action={<Link href="/mapa" className="btn-secondary">Ver en el mapa</Link>} />
       {zones.length === 0 ? <Empty>No hay territorios. Corre el archivo supabase/migrations/0002_territorios.sql.</Empty> : (
         <div className="grid sm:grid-cols-2 gap-3">
           {zones.map((z) => {

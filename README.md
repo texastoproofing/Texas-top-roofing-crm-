@@ -17,6 +17,7 @@ Tecnología: Next.js 14 + Supabase (base de datos, usuarios y seguridad) + Verce
 | Calles | 10 zonas, 198 calles. +1 / +5 puertas, “+ Lead” en la calle, estado y notas |
 | Usuarios | Solo administrador: crear usuarios con contraseña temporal, cambiar rol, desactivar |
 | Fotos y documentos | En cada trabajo: tomar fotos con la cámara, subir varias fotos, PDF, Word y Excel (máx. 25 MB). Categorías: techo, estimado de la aseguradora, contrato, reporte de medidas y otros. Miniaturas, vista previa, descarga, descripción por foto, eliminar con confirmación y resumen de lo cargado |
+| Mapa | Leads y clientes por dirección, con colores por estado y ★ en firmados/en proceso/terminados; calles del territorio pintadas según visitas; filtros por vendedor, estado, zona y última visita; búsqueda; lista sincronizada; “Por revisar” para direcciones sin ubicación; Ruta del día guardada por vendedor y fecha con salida por GPS o dirección y enlaces a Google/Apple Maps; referencias cercanas con autorización del cliente |
 | Importar Trello | Solo administrador: sube el JSON del tablero y crea contactos + trabajos |
 
 Workflow (agrupado como en JobNimbus):
@@ -44,6 +45,7 @@ Listas de Trello → estado: COSTUMER → Lead nuevo · INSPECTION SCHEDULED →
 2. **SQL Editor → New query**: pega todo `supabase/migrations/0001_init.sql` → **Run**.
 3. Nueva query: pega `supabase/migrations/0002_territorios.sql` → **Run** (carga las 10 zonas y 198 calles).
    Nueva query: pega `supabase/migrations/0003_archivos.sql` → **Run** (crea el almacenamiento privado `job-files` para fotos y documentos).
+   Nueva query: pega `supabase/migrations/0004_mapa.sql` → **Run** (ubicaciones, visitas a calles, rutas y referencias).
 4. **Authentication → Sign In / Providers → Email**: deja Email activado y **desactiva “Allow new users to sign up”** (los usuarios los crea el administrador desde el CRM).
 5. **Authentication → Users → Add user → Create new user**: tu correo y contraseña, marca *Auto Confirm User*. Este primer usuario queda como **administrador**.
 6. **Project Settings → API**: copia `Project URL`, la llave `anon public` y la llave `service_role`.
@@ -86,6 +88,14 @@ Los datos de los clientes viven solo en tu proyecto de Supabase. **No** se guard
 - El navegador sube el archivo directo a Storage (con barra de progreso, sin el límite de 4.5 MB de Vercel) y después el servidor revisa que exista, que el tamaño y el tipo coincidan y que el usuario pueda ver el trabajo; si algo falla, borra el archivo.
 - Ver, subir y descargar: quien puede ver el trabajo. Eliminar: oficina (admin, PM, asistente) o quien lo subió. Los enlaces de vista y descarga son firmados y vencen en 1 hora.
 - Al borrar un trabajo o un contacto se borran también sus archivos. Las subidas abandonadas se limpian solas después de 1 hora.
+
+### Mapa: proveedores y cómo funciona
+- **Ubicar direcciones:** US Census Geocoder (gobierno de EE. UU., gratis, sin clave). Se llama solo desde el servidor y el resultado se guarda en `job_locations`; mientras la dirección no cambie no se vuelve a consultar. Si la dirección es ambigua o no aparece, queda en **Por revisar** para elegir la opción correcta, corregir la dirección o marcar el punto a mano.
+- **Trazo de calles:** OpenStreetMap (Overpass API, gratis, sin clave). Se consulta una vez por zona y se guarda en `territory_streets.geom`.
+- **Mapa base:** OpenStreetMap. Para más uso, cambia a un proveedor con clave pública restringida a tu dominio (variables `NEXT_PUBLIC_MAP_TILE_URL` y `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION`).
+- **Ruta del día:** orden manual. “Ordenar por cercanía” es aproximado en línea recta y no es una ruta optimizada por calles. La navegación se abre en Google Maps (hasta 10 paradas por enlace) o Apple Maps (una parada a la vez).
+- **Referencias:** el mapa marca con ★ los trabajos con contrato firmado, en proceso o terminados. Nombre y dirección de un cliente solo se muestran a otros vendedores si en su trabajo se marcó “El cliente autorizó usar su trabajo como referencia” (apagado por defecto).
+- **Visitas a calles:** registrar un tramo deja la calle “en progreso”; solo se marca terminada si el usuario lo elige.
 
 ## Próximas etapas
 2. **Seguros:** suplementos línea por línea, cartas.

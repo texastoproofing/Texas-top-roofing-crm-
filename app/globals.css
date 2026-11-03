@@ -20,3 +20,14 @@ body { @apply bg-gray-50 text-gray-900 antialiased; }
   .muted { @apply text-sm text-gray-500; }
   .chip { @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap; }
 }
+
+/* Marcadores del mapa */
+.ttr-pin-wrap { background: transparent; border: 0; display: flex; align-items: center; justify-content: center; }
+.ttr-pin {
+  background: var(--c); border: 3px solid #fff; border-radius: 9999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center;
+  color: #fff; font: 700 12px/1 system-ui, sans-serif;
+}
+.ttr-pin.ttr-ref { border-color: #facc15; box-shadow: 0 0 0 3px rgba(250,204,21,.45), 0 1px 4px rgba(0,0,0,.45); font-size: 15px; }
+.ttr-pin.ttr-sel { outline: 3px solid #111827; outline-offset: 2px; }
+.leaflet-container { font: inherit; }

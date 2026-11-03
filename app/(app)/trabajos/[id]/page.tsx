@@ -11,6 +11,7 @@ import { TaskForm, TaskList } from "@/components/TaskList";
 import { addJobNote, deleteJob, setJobStatus, updateJob } from "../actions";
 import { createAppointment, deleteAppointment } from "../../calendario/actions";
 import { JobFilesTab } from "./JobFilesTab";
+import { JobReferences } from "@/components/JobReferences";
 
 export default async function JobPage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string } }) {
   const tab = searchParams.tab === "archivos" ? "archivos" : "resumen";
@@ -139,6 +140,10 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
         </div>
 
         <aside className="space-y-5">
+          <JobReferences
+            job={{ id: j.id, status: j.status, reference_authorized: !!j.reference_authorized, reference_authorized_at: j.reference_authorized_at ?? null, reference_note: j.reference_note ?? null }}
+            canEdit={profile.role !== "vendedor" || j.sales_rep_id === profile.id || j.created_by === profile.id}
+          />
           <section className="card p-4">
             <h2 className="h2 mb-2">Seguro</h2>
             <KV k="Tipo" v={j.job_type === "retail" ? "Retail" : "Seguro"} />
