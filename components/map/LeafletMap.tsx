@@ -98,14 +98,15 @@ export default function LeafletMap({
     if (hail) {
       for (const z of hail.zones) {
         L.polygon(z.geom, {
-          pane: "hail", color: z.mine ? "#111827" : "#7f1d1d", weight: z.mine ? 3 : z.rank != null && z.rank < 5 ? 2.5 : 1,
-          dashArray: z.mine ? "6 4" : undefined, fillColor: "#dc2626", fillOpacity: z.rank != null && z.rank < 5 ? 0.12 : 0.04,
+          pane: "hail", color: z.mine ? "#111827" : "#b91c1c", weight: z.mine ? 1.5 : z.rank != null && z.rank < 5 ? 1.2 : 0.6,
+          opacity: z.mine ? 0.9 : z.rank != null && z.rank < 5 ? 0.7 : 0.35,
+          dashArray: z.mine ? "5 4" : undefined, fillColor: "#dc2626", fillOpacity: z.rank != null && z.rank < 5 ? 0.12 : 0.04,
         }).bindTooltip(esc(z.label), { sticky: true })
           .on("click", (e: any) => { L.DomEvent.stopPropagation(e); if (!cb.current.pickMode) cb.current.onZone(z.zip); })
           .addTo(hailLayer);
       }
       for (const w of [...hail.swaths].sort((a, b) => a.min - b.min)) {
-        L.polygon(w.geom, { pane: "hail", color: hailColor(w.min), weight: 1, fillColor: hailColor(w.min), fillOpacity: 0.35, interactive: false }).addTo(hailLayer);
+        L.polygon(w.geom, { pane: "hail", color: hailColor(w.min), weight: 0.5, opacity: 0.6, fillColor: hailColor(w.min), fillOpacity: 0.35, interactive: false }).addTo(hailLayer);
       }
       for (const r of hail.reports) {
         L.circleMarker([r.lat, r.lng], { pane: "hail", radius: 3 + Math.min(5, r.size * 1.5), weight: 1, color: "#fff", fillColor: "#111827", fillOpacity: 0.85 })
