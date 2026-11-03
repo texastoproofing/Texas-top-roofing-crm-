@@ -137,3 +137,49 @@ out geom;`;
     return { found: new Map(), error: (e as Error).name === "AbortError" ? "OpenStreetMap tardó demasiado." : "OpenStreetMap no respondió." };
   }
 }
+
+// ---------------------------------------------------------------------
+// Trazo de UNA calle con Nominatim (OpenStreetMap). Política de uso:
+// máximo 1 consulta por segundo, identificarse y guardar resultados (lo hacemos).
+// https://operations.osmfoundation.org/policies/nominatim/
+// ---------------------------------------------------------------------
+const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+
+function linesFromGeojson(g: any): [number, number][][] {
+  const toLL = (c: any[]) => c.map((p) => [Number(p[1]), Number(p[0])] as [number, number])
+    .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  if (g?.type === "LineString") return [toLL(g.coordinates)].filter((l) => l.length > 1);
+  if (g?.type === "MultiLineString") return g.coordinates.map(toLL).filter((l: any[]) => l.length > 1);
+  return [];
+}
+
+export async function fetchStreetNominatim(name: string, city: string | null, zip: string | null):
+  Promise<{ status: "ok"; lines: [number, number][][] } | { status: "no_encontrada" } | { status: "error"; error: string }> {
+  const tries: Record<string, string>[] = [];
+  if (city) tries.push({ city });
+  if (zip) tries.push({ postalcode: zip });
+  for (let i = 0; i < tries.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 1100));
+    const u = new URL(NOMINATIM);
+    u.searchParams.set("street", name);
+    Object.entries(tries[i]).forEach(([k, v]) => u.searchParams.set(k, v));
+    u.searchParams.set("state", "Texas");
+    u.searchParams.set("countrycodes", "us");
+    u.searchParams.set("format", "jsonv2");
+    u.searchParams.set("polygon_geojson", "1");
+    u.searchParams.set("limit", "20");
+    u.searchParams.set("dedupe", "0");
+    let data: any[];
+    try {
+      data = await fetchJson(u.toString(), { headers: { "Accept-Language": "en" } }, 10000);
+    } catch (e) {
+      return { status: "error", error: (e as Error).name === "AbortError" ? "OpenStreetMap tardó demasiado." : "OpenStreetMap no respondió." };
+    }
+    const want = name.toLowerCase();
+    const lines = (Array.isArray(data) ? data : [])
+      .filter((r) => r.category === "highway" && String(r.name ?? "").toLowerCase() === want)
+      .flatMap((r) => linesFromGeojson(r.geojson));
+    if (lines.length) return { status: "ok", lines };
+  }
+  return { status: "no_encontrada" };
+}

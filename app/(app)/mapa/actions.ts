@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
-import { fetchStreetLines, geocodeAddress, type GeoCandidate } from "@/lib/geo-server";
+import { fetchStreetNominatim, geocodeAddress, type GeoCandidate } from "@/lib/geo-server";
 import { addressInput, isLatLng, normInput } from "@/lib/map";
 import { isUuid } from "@/lib/files";
 import { todayTX } from "@/lib/format";
@@ -122,32 +122,33 @@ export async function geocodeStart(address: string): Promise<R<{ lat: number; ln
 // ---------------------------------------------------------------------
 // Trazos de calles (OpenStreetMap), se guardan una sola vez
 // ---------------------------------------------------------------------
-export async function loadStreetGeometry(territoryId: string): Promise<R<{ found: number; missing: number }>> {
+export async function loadStreetGeometry(territoryId: string): Promise<R<{ found: number; missing: number; remaining: number }>> {
   const { supabase } = await getSession();
   if (!isUuid(territoryId)) return { ok: false, error: "Zona no válida." };
-  const { data: t } = await supabase.from("territories").select("id, city").eq("id", territoryId).maybeSingle();
-  if (!t?.city) return { ok: false, error: "La zona no tiene ciudad." };
+  const { data: t } = await supabase.from("territories").select("id, city, zip").eq("id", territoryId).maybeSingle();
+  if (!t) return { ok: false, error: "Zona no encontrada." };
   const { data: streets } = await supabase.from("territory_streets")
-    .select("id, name, geom_status, geom_updated_at").eq("territory_id", territoryId);
+    .select("id, name, geom_status, geom_updated_at").eq("territory_id", territoryId).order("position");
   const retryAfter = Date.now() - 15 * 60 * 1000; // si OpenStreetMap falló, se reintenta a los 15 min
   const pending = (streets ?? []).filter((s) => s.geom_status === "pendiente"
     || (s.geom_status === "error" && (!s.geom_updated_at || new Date(s.geom_updated_at).getTime() < retryAfter)));
-  if (!pending.length) return { ok: true, found: 0, missing: 0 };
+  if (!pending.length) return { ok: true, found: 0, missing: 0, remaining: 0 };
 
-  const { found, error } = await fetchStreetLines(t.city, pending.map((s) => s.name));
-  const now = new Date().toISOString();
-  let ok = 0, missing = 0;
-  for (const s of pending) {
-    const lines = found.get(s.name);
-    const patch = error
-      ? { geom_status: "error", geom_updated_at: now }
-      : lines ? { geom_status: "ok", geom: lines, geom_updated_at: now } : { geom_status: "no_encontrada", geom_updated_at: now };
-    if (lines) ok++; else if (!error) missing++;
-    await supabase.from("territory_streets").update(patch).eq("id", s.id);
+  // Máximo ~1 consulta por segundo (política de Nominatim) y un lote que quepa en el tiempo de la función
+  const batch = pending.slice(0, 18);
+  let ok = 0, missing = 0, lastError: string | null = null;
+  for (let i = 0; i < batch.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 1100));
+    const s = batch[i];
+    const res = await fetchStreetNominatim(s.name, t.city, t.zip);
+    const now = new Date().toISOString();
+    if (res.status === "ok") { ok++; await supabase.from("territory_streets").update({ geom_status: "ok", geom: res.lines, geom_updated_at: now }).eq("id", s.id); }
+    else if (res.status === "no_encontrada") { missing++; await supabase.from("territory_streets").update({ geom_status: "no_encontrada", geom_updated_at: now }).eq("id", s.id); }
+    else { lastError = res.error; await supabase.from("territory_streets").update({ geom_status: "error", geom_updated_at: now }).eq("id", s.id); break; }
   }
   revalidatePath("/mapa");
-  if (error) return { ok: false, error: `${error} Se reintentará más tarde.` };
-  return { ok: true, found: ok, missing };
+  if (lastError) return { ok: false, error: `${lastError} Se reintentará más tarde.` };
+  return { ok: true, found: ok, missing, remaining: pending.length - batch.length };
 }
 
 // ---------------------------------------------------------------------

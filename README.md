@@ -91,7 +91,7 @@ Los datos de los clientes viven solo en tu proyecto de Supabase. **No** se guard
 
 ### Mapa: proveedores y cómo funciona
 - **Ubicar direcciones:** US Census Geocoder (gobierno de EE. UU., gratis, sin clave). Se llama solo desde el servidor y el resultado se guarda en `job_locations`; mientras la dirección no cambie no se vuelve a consultar. Si la dirección es ambigua o no aparece, queda en **Por revisar** para elegir la opción correcta, corregir la dirección o marcar el punto a mano.
-- **Trazo de calles:** OpenStreetMap (Overpass API, gratis, sin clave). Se consulta una vez por zona y se guarda en `territory_streets.geom`.
+- **Trazo de calles:** OpenStreetMap (Nominatim, gratis, sin clave, máximo 1 consulta por segundo). Cada calle se consulta una sola vez y se guarda en `territory_streets.geom`.
 - **Mapa base:** OpenStreetMap. Para más uso, cambia a un proveedor con clave pública restringida a tu dominio (variables `NEXT_PUBLIC_MAP_TILE_URL` y `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION`).
 - **Ruta del día:** orden manual. “Ordenar por cercanía” es aproximado en línea recta y no es una ruta optimizada por calles. La navegación se abre en Google Maps (hasta 10 paradas por enlace) o Apple Maps (una parada a la vez).
 - **Referencias:** el mapa marca con ★ los trabajos con contrato firmado, en proceso o terminados. Nombre y dirección de un cliente solo se muestran a otros vendedores si en su trabajo se marcó “El cliente autorizó usar su trabajo como referencia” (apagado por defecto).

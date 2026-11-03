@@ -105,9 +105,15 @@ export function MapApp(props: {
       for (const [i, t] of props.territoriesPendingGeom.entries()) {
         if (stop) break;
         // Pausa entre zonas para respetar el límite de los servidores públicos de OpenStreetMap
-        if (i > 0) await new Promise((res) => setTimeout(res, 3000));
-        const r = await loadStreetGeometry(t).catch(() => null);
+        if (i > 0) await new Promise((res) => setTimeout(res, 1500));
+        let r = await loadStreetGeometry(t).catch(() => null);
+        // Cada llamada traza un lote; se repite mientras queden calles en la zona
+        for (let k = 0; k < 6 && r && r.ok && r.remaining > 0 && !stop; k++) {
+          await new Promise((res) => setTimeout(res, 1500));
+          r = await loadStreetGeometry(t).catch(() => null);
+        }
         setBg((b) => ({ ...b, streets: Math.max(0, b.streets - 1), msg: r && !r.ok ? r.error : b.msg }));
+        router.refresh();
       }
       if (props.territoriesPendingGeom.length) router.refresh();
     })();
