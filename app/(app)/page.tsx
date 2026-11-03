@@ -82,7 +82,7 @@ export default async function Dashboard() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       {/* Saludo */}
       <div>
         <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight">{name ? `¡Hola, ${name}!` : "¡Hola!"} <span aria-hidden>👋</span></h1>
@@ -109,7 +109,7 @@ export default async function Dashboard() {
         <QuickButtons />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div className="grid lg:grid-cols-2 gap-5 order-last lg:order-none">
         {/* Pipeline (dona) */}
         <Section title="Pipeline de ventas" action={<Link href="/trabajos" className="link">Ver pipeline →</Link>} className="order-5 lg:order-none">
           {pipeTotal === 0 ? <EmptyInline>No hay trabajos todavía.</EmptyInline> : (
