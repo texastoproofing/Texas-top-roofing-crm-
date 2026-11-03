@@ -35,7 +35,7 @@ export async function geocodePending(limit = 12): Promise<R<{ processed: number;
 
   const retryAfter = Date.now() - 6 * 3600 * 1000; // errores del proveedor se reintentan cada 6 h
   const todo: { id: string; input: string }[] = [];
-  for (const j of data ?? []) {
+  for (const j of (data ?? []) as any[]) {
     const loc = Array.isArray(j.location) ? j.location[0] : j.location;
     const input = addressInput({ address: j.address ?? j.contact?.address, city: j.city ?? j.contact?.city, zip: j.zip ?? j.contact?.zip, state: j.contact?.state });
     if (!input) continue;
