@@ -88,3 +88,14 @@ test("NEXRAD: lee el CSV de NOAA SWDI y se detiene en el resumen", async () => {
   assert.equal(r.length, 1);
   assert.deepEqual(r[0], { t: "2025-05-28T22:18:47Z", radar: "KEWX", cell: "U5", size: 2, lat: 30.769, lng: -98.137 });
 });
+
+test("dueños: nombre de calle, dirección del condado y nombre de persona", async () => {
+  const { streetBase, parseSitus, streetMatches, ownerToPerson } = await import("../lib/owners.ts");
+  assert.equal(streetBase("Jamie Lyn Boulevard"), "JAMIE LYN");
+  assert.equal(streetBase("Gage Park"), "GAGE PARK");
+  const p = parseSitus("10323 IVY HORN \r\nSCHERTZ, TX 78154");
+  assert.equal(p.number, 10323); assert.equal(p.street, "IVY HORN"); assert.equal(p.line, "10323 Ivy Horn, Schertz, TX 78154");
+  assert.ok(streetMatches("IVY HORN", "IVY HORN")); assert.ok(streetMatches("JAMIE LYN BLVD", "JAMIE LYN")); assert.ok(!streetMatches("IVY HORNET", "IVY HORN"));
+  assert.deepEqual(ownerToPerson("SMITH JOHN A & MARY B"), { first: "John", last: "Smith" });
+  assert.equal(ownerToPerson("PROGRESS RESIDENTIAL BORROWER 6 LLC"), null);
+});

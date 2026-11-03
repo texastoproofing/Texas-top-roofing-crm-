@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
+import { importOwnersForTerritory } from "@/lib/owners-server";
 import { str } from "@/lib/format";
 
 export async function updateStreet(id: string, territoryId: string, fd: FormData) {
@@ -21,4 +22,16 @@ export async function updateStreet(id: string, territoryId: string, fd: FormData
   await supabase.from("territory_streets").update(patch).eq("id", id);
   revalidatePath(`/territorios/${territoryId}`);
   revalidatePath("/territorios");
+}
+
+// Dueños de las casas (registro público del condado de Bexar). Solo administradores.
+export async function loadOwners(territoryId: string): Promise<{ ok: true; houses: number; remaining: number; notes: string[] } | { ok: false; error: string }> {
+  await requireAdmin();
+  try {
+    const r = await importOwnersForTerritory(territoryId);
+    revalidatePath(`/territorios/${territoryId}`);
+    return { ok: true, ...r };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.includes("SUPABASE_SERVICE_ROLE_KEY") ? (e as Error).message : "No se pudieron cargar los dueños." };
+  }
 }

@@ -4,8 +4,9 @@ import { fullName } from "@/lib/format";
 import { Field, PageHeader, Select } from "@/components/ui";
 import { JobFields } from "@/components/JobForm";
 import { createJob } from "../actions";
+import { ownerToPerson } from "@/lib/owners";
 
-export default async function NewJob({ searchParams }: { searchParams: { contacto?: string; calle?: string } }) {
+export default async function NewJob({ searchParams }: { searchParams: { contacto?: string; calle?: string; casa?: string } }) {
   const { supabase } = await getSession();
   const [users, terr, contacts] = await Promise.all([
     listProfiles(),
@@ -24,6 +25,19 @@ export default async function NewJob({ searchParams }: { searchParams: { contact
       const t = (terr.data ?? []).find((x) => x.id === s.territory_id);
       streetId = s.id;
       Object.assign(prefill, { address: ` ${s.name}`, city: t?.city, zip: t?.zip, territory_id: s.territory_id, storm_date: t?.storm_date });
+    }
+  }
+  // Casa con dueño (registro del condado): llena dirección y nombre si el dueño es una persona
+  let owner: { first: string; last: string } | null = null;
+  let ownerRaw: string | null = null;
+  if (searchParams.casa && streetId) {
+    const { data: h } = await supabase.from("street_houses").select("situs, owner_name, street_id").eq("id", searchParams.casa).maybeSingle();
+    if (h && h.street_id === streetId) {
+      const [line] = String(h.situs).split(",");
+      prefill.address = line;
+      owner = ownerToPerson(h.owner_name);
+      ownerRaw = h.owner_name;
+      if (owner) prefill.name = `Techo – ${owner.first} ${owner.last}`;
     }
   }
   const active = users.filter((u) => u.active);
@@ -45,8 +59,9 @@ export default async function NewJob({ searchParams }: { searchParams: { contact
               <Select label="Contacto existente" name="contact_id" empty="— Cliente nuevo (llenar abajo) —"
                 options={(contacts.data ?? []).map((c) => ({ value: c.id, label: `${fullName(c)}${c.address ? " · " + c.address : ""}` }))} />
               <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
-                <Field label="Nombre (cliente nuevo)" name="c_first_name" />
-                <Field label="Apellido" name="c_last_name" />
+                {ownerRaw && <p className="sm:col-span-2 text-xs text-gray-600">Dueño según el condado: <b>{ownerRaw}</b>. Confirma el nombre con la persona.</p>}
+                <Field label="Nombre (cliente nuevo)" name="c_first_name" defaultValue={owner?.first} />
+                <Field label="Apellido" name="c_last_name" defaultValue={owner?.last} />
                 <Field label="Teléfono" name="c_phone" type="tel" inputMode="tel" />
                 <Field label="Correo" name="c_email" type="email" />
                 <Select label="Origen" name="c_source" defaultValue={streetId ? "door_to_door" : "lead_comprado"}
