@@ -12,6 +12,7 @@ import { TaskForm, TaskList } from "@/components/TaskList";
 import { addJobNote, deleteJob, setJobStatus, updateJob } from "../actions";
 import { createAppointment, deleteAppointment } from "../../calendario/actions";
 import { JobFilesTab } from "./JobFilesTab";
+import { JobFinance } from "./JobFinance";
 import { JobReferences } from "@/components/JobReferences";
 
 export default async function JobPage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string } }) {
@@ -171,6 +172,7 @@ export default async function JobPage({ params, searchParams }: { params: { id: 
             <KV k="Deducible" v={fmtMoney(j.deductible)} />
             {j.notes && <p className="text-sm whitespace-pre-wrap mt-3 text-gray-700">{j.notes}</p>}
           </section>
+          <JobFinance jobId={j.id} users={active} />
           <details className="card p-4">
             <summary className="font-semibold cursor-pointer">Editar trabajo</summary>
             <form action={updateJob.bind(null, j.id)} className="space-y-4 mt-4">
