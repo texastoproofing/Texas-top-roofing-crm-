@@ -98,15 +98,15 @@ export default function LeafletMap({
     if (hail) {
       for (const z of hail.zones) {
         L.polygon(z.geom, {
-          pane: "hail", color: z.mine ? "#111827" : "#b91c1c", weight: z.mine ? 1.5 : z.rank != null && z.rank < 5 ? 1.2 : 0.6,
-          opacity: z.mine ? 0.9 : z.rank != null && z.rank < 5 ? 0.7 : 0.35,
+          pane: "hail", color: z.mine ? "#111827" : "#b91c1c", weight: z.mine ? 1 : z.rank != null && z.rank < 5 ? 0.8 : 0.4,
+          opacity: z.mine ? 0.8 : z.rank != null && z.rank < 5 ? 0.5 : 0.25,
           dashArray: z.mine ? "5 4" : undefined, fillColor: "#dc2626", fillOpacity: z.rank != null && z.rank < 5 ? 0.12 : 0.04,
         }).bindTooltip(esc(z.label), { sticky: true })
           .on("click", (e: any) => { L.DomEvent.stopPropagation(e); if (!cb.current.pickMode) cb.current.onZone(z.zip); })
           .addTo(hailLayer);
       }
       for (const w of [...hail.swaths].sort((a, b) => a.min - b.min)) {
-        L.polygon(w.geom, { pane: "hail", color: hailColor(w.min), weight: 0.5, opacity: 0.6, fillColor: hailColor(w.min), fillOpacity: 0.35, interactive: false }).addTo(hailLayer);
+        L.polygon(w.geom, { pane: "hail", color: hailColor(w.min), weight: 0, opacity: 0, fillColor: hailColor(w.min), fillOpacity: 0.35, interactive: false }).addTo(hailLayer);
       }
       for (const r of hail.reports) {
         L.circleMarker([r.lat, r.lng], { pane: "hail", radius: 3 + Math.min(5, r.size * 1.5), weight: 1, color: "#fff", fillColor: "#111827", fillOpacity: 0.85 })
@@ -122,7 +122,7 @@ export default function LeafletMap({
         const sty = STREET_STATUS[key] ?? STREET_STATUS.pendiente;
         const sel = street.id === selectedStreetId;
         for (const line of street.lines) {
-          L.polyline(line, { color: sty.color, weight: sel ? 9 : 5, opacity: sel ? 1 : 0.85, dashArray: sty.dash, interactive: false }).addTo(streetsLayer);
+          L.polyline(line, { color: sty.color, weight: sel ? 5 : 2.5, opacity: sel ? 1 : 0.8, dashArray: sty.dash, interactive: false }).addTo(streetsLayer);
           // línea invisible y gruesa para tocar fácil en el teléfono
           L.polyline(line, { color: "#000", weight: 22, opacity: 0 })
             .on("click", (e: any) => { L.DomEvent.stopPropagation(e); if (!cb.current.pickMode) cb.current.onSelectStreet(street.id); })

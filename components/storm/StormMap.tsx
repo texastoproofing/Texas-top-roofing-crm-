@@ -57,20 +57,20 @@ export default function StormMap({ layers, swaths, events, zips, leads, fitKey, 
     if (layers.zips) {
       for (const z of zips) {
         const a = Math.min(0.55, (z.score / 100) * 0.6);
-        L.polygon(z.geom, { color: "#6b7280", weight: 1, fillColor: "#c8102e", fillOpacity: a })
+        L.polygon(z.geom, { color: "#6b7280", weight: 0.5, opacity: 0.6, fillColor: "#c8102e", fillOpacity: a })
           .bindTooltip(esc(z.label), { sticky: true })
           .on("click", () => cb.current.onZip(z.zip)).addTo(s.zipL);
       }
     }
     if (layers.territories) {
       for (const z of zips.filter((x) => x.assignedTo)) {
-        L.polygon(z.geom, { color: "#111827", weight: 3, dashArray: "6 4", fill: false, interactive: false })
+        L.polygon(z.geom, { color: "#111827", weight: 1.2, dashArray: "5 4", fill: false, interactive: false })
           .bindTooltip(`${z.zip} · ${esc(z.assignedTo!)}`, { permanent: false }).addTo(s.terrL);
       }
     }
     if (layers.swaths) {
       for (const w of [...swaths].sort((a, b) => a.min - b.min)) {
-        L.polygon(w.geom, { color: swathColor(w.min), weight: 1, fillColor: swathColor(w.min), fillOpacity: 0.35 })
+        L.polygon(w.geom, { color: swathColor(w.min), weight: 0, fillColor: swathColor(w.min), fillOpacity: 0.35 })
           .bindTooltip(`Radar (estimado): ${w.min.toFixed(2)}"+ · ${w.date}`, { sticky: true })
           .addTo(s.swathL);
       }
