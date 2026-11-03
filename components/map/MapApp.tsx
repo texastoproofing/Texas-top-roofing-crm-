@@ -102,8 +102,10 @@ export function MapApp(props: {
         router.refresh();
         if (r.processed === 0) break;
       }
-      for (const t of props.territoriesPendingGeom) {
+      for (const [i, t] of props.territoriesPendingGeom.entries()) {
         if (stop) break;
+        // Pausa entre zonas para respetar el límite de los servidores públicos de OpenStreetMap
+        if (i > 0) await new Promise((res) => setTimeout(res, 3000));
         const r = await loadStreetGeometry(t).catch(() => null);
         setBg((b) => ({ ...b, streets: Math.max(0, b.streets - 1), msg: r && !r.ok ? r.error : b.msg }));
       }
