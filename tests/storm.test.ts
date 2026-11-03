@@ -66,3 +66,17 @@ test("Lead: dentro de franja = exposición potencial; daño solo con reclamo apr
   assert.equal(far.followUp, null);
   assert.equal(leadExposure({ ...base, status: "lead_nuevo", lat: null, lng: null }, [swath], [], [], period), null);
 });
+
+test("zonas afectadas: ordena por granizo y respeta el período", async () => {
+  const { hailZones } = await import("../lib/storm.ts");
+  const z = (zip: string): any => ({ zip, name: zip, geom: square, bbox: [30.5, -97.9, 30.6, -97.8] });
+  const stats: any[] = [
+    { zip: "A", event_date: "2025-05-28", source_key: "hailpoint", max_hail_in: 2.75, frac_1: 0.9, frac_175: 0.6, frac_25: 0.1 },
+    { zip: "B", event_date: "2025-05-28", source_key: "hailpoint", max_hail_in: 1.25, frac_1: 0.2, frac_175: 0, frac_25: 0 },
+    { zip: "C", event_date: "2023-05-28", source_key: "hailpoint", max_hail_in: 3, frac_1: 1, frac_175: 1, frac_25: 1 },
+  ];
+  const r = hailZones({ zips: [z("A"), z("B"), z("C")], stats, events: [], period: { from: "2024-01-01", to: "2026-11-02" } });
+  assert.deepEqual(r.map((x) => x.zip), ["A", "B"]); // C fuera del período
+  assert.ok(r[0].score > r[1].score);
+  assert.match(r[0].reasons[0], /60% del ZIP/);
+});

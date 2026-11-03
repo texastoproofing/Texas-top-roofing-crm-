@@ -237,3 +237,47 @@ export function toCsv(rows: (string | number | null | undefined)[][]) {
   };
   return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\n");
 }
+
+// ---------------- Zonas más afectadas por granizo (para vendedores en el mapa) ----------------
+// Solo usa datos meteorológicos (sin métricas comerciales). Indica dónde hubo más granizo,
+// no qué casas tienen daño.
+export type HailZone = {
+  zip: string; name: string | null; score: number; bbox: number[] | null;
+  radarMax: number; frac175: number; frac1: number; radarDate: string | null;
+  reports: number; obsMax: number; lastDate: string | null;
+  target: { lat: number; lng: number } | null; reasons: string[];
+};
+
+export function hailZones(args: { zips: ZipInfo[]; stats: ZipStat[]; events: StormEvent[]; period: Period }): HailZone[] {
+  const { zips, stats, events, period } = args;
+  const out: HailZone[] = [];
+  for (const z of zips) {
+    const st = stats.filter((s) => s.zip === z.zip && inPeriod(s.event_date, period));
+    const ev = events.filter((e) => e.event_type === "granizo" && (e.hail_in ?? 0) >= 1 && inPeriod(e.event_date, period) &&
+      (e.zip === z.zip || (!e.zip && z.geom && inBbox(e.lat, e.lng, z.bbox) && pointInRing(e.lat, e.lng, z.geom))));
+    if (!st.length && !ev.length) continue;
+    let radarMax = 0, frac175 = 0, frac1 = 0, radarDate: string | null = null;
+    for (const s of st) {
+      if (Number(s.max_hail_in) > radarMax) radarMax = Number(s.max_hail_in);
+      if (Number(s.frac_1) > frac1) frac1 = Number(s.frac_1);
+      if (Number(s.frac_175) > frac175 || (Number(s.frac_175) === frac175 && !radarDate)) { frac175 = Number(s.frac_175); radarDate = s.event_date; }
+    }
+    const big = [...ev].sort((a, b) => (b.hail_in ?? 0) - (a.hail_in ?? 0))[0];
+    const obsMax = big?.hail_in ?? 0;
+    const dates = [...st.map((s) => s.event_date), ...ev.map((e) => e.event_date)].sort();
+    const lastDate = dates[dates.length - 1] ?? null;
+    // Tamaño máximo (observado o estimado), extensión dentro del ZIP y número de reportes confirmados
+    const size = clamp(Math.max(radarMax, obsMax) / 2.5);
+    const extent = clamp(frac175 / 0.4) * 0.8 + clamp(frac1 / 0.8) * 0.2;
+    const confirm = clamp(ev.length / 5);
+    const score = Math.round(100 * (0.4 * size + 0.35 * extent + 0.25 * confirm));
+    const reasons: string[] = [];
+    if (radarMax > 0) reasons.push(`Radar: hasta ${radarMax.toFixed(2)}" estimado${frac175 > 0 ? `; ${Math.round(frac175 * 100)}% del ZIP con ≥1.75"` : ""}${radarDate ? ` (${radarDate})` : ""}.`);
+    if (ev.length) reasons.push(`${ev.length} reporte(s) de granizo ≥1" observados; máximo ${obsMax.toFixed(2)}"${big?.location_text ? ` en ${big.location_text}` : ""} (${big!.event_date}).`);
+    const b = z.bbox;
+    const target = big ? { lat: big.lat, lng: big.lng } : b ? { lat: (b[0] + b[2]) / 2, lng: (b[1] + b[3]) / 2 } : null;
+    out.push({ zip: z.zip, name: z.name, score, bbox: b, radarMax, frac175, frac1, radarDate, reports: ev.length, obsMax, lastDate, target, reasons });
+  }
+  return out.sort((a, b) => b.score - a.score || (b.lastDate ?? "").localeCompare(a.lastDate ?? ""));
+}
+export const hailColor = (inches: number) => (inches >= 2.75 ? "#7f1d1d" : inches >= 2.25 ? "#dc2626" : inches >= 2 ? "#f97316" : "#f59e0b");

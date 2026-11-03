@@ -16,7 +16,7 @@ export default async function MapaPage() {
   const { supabase, profile } = await getSession();
   const nowIso = new Date().toISOString();
 
-  const [jobsRes, apptRes, taskRes, visitRes, terrRes, streetRes, streetVisitRes, users, route] = await Promise.all([
+  const [jobsRes, apptRes, taskRes, visitRes, terrRes, streetRes, streetVisitRes, users, route, zipsRes, statsRes, swathsRes, hailRes, assignRes] = await Promise.all([
     supabase.from("jobs")
       .select("id, number, name, status, address, city, zip, sales_rep_id, territory_id, reference_authorized, contact:contacts(first_name, last_name, address, city, zip, state), rep:profiles!jobs_sales_rep_id_fkey(full_name), location:job_locations(input, status, lat, lng, matched_address, source, candidates, error)")
       .limit(2000),
@@ -28,6 +28,13 @@ export default async function MapaPage() {
     supabase.from("street_visits").select("street_id, visited_on").order("visited_on", { ascending: false }).limit(5000),
     listProfiles(),
     getRoute(todayTX()),
+    // Granizo: contornos de ZIP, estimaciones de radar y reportes observados
+    supabase.from("zip_boundaries").select("zip, name, geom, bbox"),
+    supabase.from("zip_hail_stats").select("zip, event_date, source_key, max_hail_in, frac_1, frac_175, frac_25"),
+    supabase.from("storm_swaths").select("id, source_key, event_date, min_hail_in, geom, bbox"),
+    supabase.from("storm_events").select("id, source_key, event_type, event_date, lat, lng, hail_in, location_text, zip")
+      .eq("event_type", "granizo").gte("hail_in", 1).order("event_date", { ascending: false }).limit(5000),
+    supabase.from("zip_assignments").select("zip, rep_id, rep:profiles!zip_assignments_rep_id_fkey(full_name)").is("ends_on", null),
   ]);
 
   // Próxima actividad por trabajo: la cita futura más cercana o, si no hay, la tarea pendiente más próxima
@@ -112,6 +119,13 @@ export default async function MapaPage() {
       territoriesPendingGeom={territoriesPendingGeom}
       initialRoute={route.ok ? route.route : null}
       today={todayTX()}
+      hail={{
+        zips: ((zipsRes.data ?? []) as any[]).filter((z) => Array.isArray(z.geom)),
+        stats: ((statsRes.data ?? []) as any[]).map((x) => ({ ...x, max_hail_in: Number(x.max_hail_in), frac_1: Number(x.frac_1), frac_175: Number(x.frac_175), frac_25: Number(x.frac_25) })),
+        swaths: ((swathsRes.data ?? []) as any[]).map((x) => ({ ...x, min_hail_in: Number(x.min_hail_in) })),
+        events: ((hailRes.data ?? []) as any[]).map((x) => ({ ...x, hail_in: Number(x.hail_in) })),
+        assigned: ((assignRes.data ?? []) as any[]).map((a) => ({ zip: a.zip, repId: a.rep_id, repName: one<any>(a.rep)?.full_name ?? null })),
+      }}
       tileUrl={process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png"}
       tileAttribution={process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}
     />

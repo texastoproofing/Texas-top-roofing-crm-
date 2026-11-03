@@ -14,7 +14,15 @@ import {
   getStreetVisits, loadStreetGeometry, retryGeocode, saveRoute, setManualLocation,
   type NearbyRef, type RoutePayload,
 } from "@/app/(app)/mapa/actions";
-import type { Bounds } from "./LeafletMap";
+import type { Bounds, HailLayer } from "./LeafletMap";
+import { hailColor, hailZones, type HailZone, type StormEvent, type Swath, type ZipInfo, type ZipStat } from "@/lib/storm";
+
+type HailData = {
+  zips: ZipInfo[]; stats: ZipStat[]; swaths: Swath[];
+  events: Pick<StormEvent, "id" | "source_key" | "event_type" | "event_date" | "lat" | "lng" | "hail_in" | "location_text" | "zip">[];
+  assigned: { zip: string; repId: string; repName: string | null }[];
+};
+const HAIL_PERIODS = [["6", "6 meses"], ["12", "12 meses"], ["24", "2 años"], ["todo", "Todo"]] as const;
 
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
   ssr: false,
@@ -57,7 +65,7 @@ function matchVisit(filter: string, last: string | null) {
 export function MapApp(props: {
   me: string; staff: boolean; points: MapPoint[]; streets: MapStreet[]; territories: Territory[];
   users: { id: string; name: string }[]; pendingGeocode: number; territoriesPendingGeom: string[];
-  initialRoute: Route | null; today: string; tileUrl: string; tileAttribution: string;
+  initialRoute: Route | null; today: string; tileUrl: string; tileAttribution: string; hail: HailData;
 }) {
   const { points, streets, territories, users, staff } = props;
   const router = useRouter();
@@ -76,6 +84,10 @@ export function MapApp(props: {
   const [focus, setFocus] = useState<{ lat: number; lng: number; zoom?: number; key: number } | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
   const [picked, setPicked] = useState<LatLng | null>(null);
+  const [showHail, setShowHail] = useState(true);
+  const [hailMonths, setHailMonths] = useState<string>("12");
+  const [fitBox, setFitBox] = useState<{ bbox: number[]; key: number } | null>(null);
+  const [selZone, setSelZone] = useState<string | null>(null);
   const [bg, setBg] = useState<{ geocoding: number; streets: number; msg: string | null }>({ geocoding: props.pendingGeocode, streets: props.territoriesPendingGeom.length, msg: null });
 
   // ---------------- Ruta del día ----------------
@@ -140,6 +152,36 @@ export function MapApp(props: {
     if (ql && !(`${s.name} ${s.territoryCode}`.toLowerCase().includes(ql))) return false;
     return s.lines.length > 0;
   }), [streets, zone, visitF, ql]);
+
+  // ---------------- Granizo ----------------
+  const hailPeriod = useMemo(() => {
+    if (hailMonths === "todo") return { from: "1900-01-01", to: props.today };
+    const d = new Date(props.today + "T12:00:00Z"); d.setUTCMonth(d.getUTCMonth() - Number(hailMonths));
+    return { from: d.toISOString().slice(0, 10), to: props.today };
+  }, [hailMonths, props.today]);
+  const zones = useMemo(() => hailZones({ zips: props.hail.zips, stats: props.hail.stats, events: props.hail.events as StormEvent[], period: hailPeriod }), [props.hail, hailPeriod]);
+  const assignedByZip = useMemo(() => new Map(props.hail.assigned.map((a) => [a.zip, a])), [props.hail.assigned]);
+  const hailLayer: HailLayer | null = useMemo(() => {
+    if (!showHail) return null;
+    const rank = new Map(zones.map((z, i) => [z.zip, i]));
+    const inP = (d: string) => d >= hailPeriod.from && d <= hailPeriod.to;
+    return {
+      zones: props.hail.zips.filter((z) => z.geom && (rank.has(z.zip) || assignedByZip.get(z.zip)?.repId === props.me)).map((z) => {
+        const hz = zones[rank.get(z.zip) ?? -1];
+        return {
+          zip: z.zip, geom: z.geom!, rank: rank.get(z.zip) ?? null, mine: assignedByZip.get(z.zip)?.repId === props.me,
+          label: hz ? `#${rank.get(z.zip)! + 1} · ${z.zip} ${z.name ?? ""} · granizo ${Math.max(hz.radarMax, hz.obsMax).toFixed(2)}"` : `${z.zip} ${z.name ?? ""} · tu zona`,
+        };
+      }),
+      swaths: props.hail.swaths.filter((w) => inP(w.event_date)).map((w) => ({ geom: w.geom, min: w.min_hail_in, label: "" })),
+      reports: props.hail.events.filter((e) => inP(e.event_date)).map((e) => ({
+        lat: e.lat, lng: e.lng, size: e.hail_in ?? 1,
+        label: `Granizo ${(e.hail_in ?? 0).toFixed(2)}" observado · ${e.location_text ?? ""} · ${e.event_date}`,
+      })),
+    };
+  }, [showHail, zones, props.hail, hailPeriod, assignedByZip, props.me]);
+  const zoneSel = selZone ? zones.find((z) => z.zip === selZone) ?? null : null;
+  const goZone = (z: HailZone) => { setSelZone(z.zip); setSelected(null); setSelStreet(null); if (z.bbox) setFitBox({ bbox: z.bbox, key: Date.now() }); };
 
   const inView = (p: MapPoint) => !bounds || (p.lat! >= bounds.s && p.lat! <= bounds.n && p.lng! >= bounds.w && p.lng! <= bounds.e);
   const listItems = (onlyInView ? located.filter(inView) : located)
@@ -283,6 +325,16 @@ export function MapApp(props: {
                 <button type="button" className="underline text-xs mt-2" onClick={() => { setPickFor(null); setPicked(null); }}>Cancelar</button>
               </div>
             )}
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs">
+              <button type="button" aria-pressed={showHail} onClick={() => setShowHail((v) => !v)}
+                className={`chip py-1.5 font-semibold ${showHail ? "bg-red-50 border-red-300 text-red-800" : "bg-gray-50 text-gray-500"}`}>
+                {showHail ? "✓ " : ""}Zonas de granizo
+              </button>
+              {showHail && HAIL_PERIODS.map(([k, l]) => (
+                <button key={k} type="button" aria-pressed={hailMonths === k} onClick={() => setHailMonths(k)}
+                  className={`chip py-1.5 ${hailMonths === k ? "bg-gray-900 text-white border-gray-900" : "bg-white"}`}>{l}</button>
+              ))}
+            </div>
             <div className="h-[58vh] lg:h-[calc(100vh-260px)] min-h-[320px]">
               <LeafletMap
                 points={located.map((p) => ({ id: p.id, lat: p.lat!, lng: p.lng!, group: p.group, label: `${p.customer} — ${p.statusLabel}`, routeIndex: routeIndex.get(p.id) ?? null, authorized: p.referenceAuthorized }))}
@@ -300,13 +352,18 @@ export function MapApp(props: {
                 onSelectStreet={(id) => { setSelStreet(id); setSelected(null); }}
                 onPick={(p) => setPicked(p)}
                 onBounds={setBounds}
+                hail={hailLayer}
+                fitBox={fitBox}
+                onZone={(zip) => { setSelZone(zip); setSelected(null); setSelStreet(null); }}
               />
             </div>
-            <Legend />
+            <Legend hail={showHail} />
           </div>
 
           <div className="px-4 lg:px-0 mt-3 lg:mt-0 space-y-3 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
             {sel && <PointCard p={sel} inRoute={routeIndex.has(sel.id)} onToggleRoute={() => toggleStop(sel.id)} onClose={() => setSelected(null)} />}
+            {zoneSel && <ZoneCard z={zoneSel} rank={zones.indexOf(zoneSel)} assigned={assignedByZip.get(zoneSel.zip) ?? null} me={props.me} onClose={() => setSelZone(null)} />}
+            {showHail && <HailZonesList zones={zones} period={HAIL_PERIODS.find(([k]) => k === hailMonths)![1]} selected={selZone} assigned={assignedByZip} me={props.me} onGo={goZone} />}
             {selS && <StreetCard s={selS} me={props.me} onClose={() => setSelStreet(null)} onSaved={() => router.refresh()} />}
 
             <div className="flex items-center justify-between">
@@ -375,7 +432,73 @@ function alertMsg(m: string) {
   setTimeout(() => el.remove(), 5000);
 }
 
-function Legend() {
+function zoneTarget(z: HailZone) {
+  return z.target ? googleDirUrl(null, [z.target]) : null;
+}
+
+function HailZonesList({ zones, period, selected, assigned, me, onGo }: {
+  zones: HailZone[]; period: string; selected: string | null;
+  assigned: Map<string, { zip: string; repId: string; repName: string | null }>; me: string; onGo: (z: HailZone) => void;
+}) {
+  const [all, setAll] = useState(false);
+  const list = all ? zones : zones.slice(0, 5);
+  return (
+    <details className="card p-3" open>
+      <summary className="font-bold cursor-pointer">Zonas más afectadas por granizo · {period}</summary>
+      <p className="text-xs text-gray-500 mt-1">Ordenadas por tamaño del granizo, extensión dentro del ZIP y reportes confirmados. Indica dónde prospectar primero; no significa que cada casa tenga daño.</p>
+      {zones.length === 0 ? <p className="muted mt-2">No hay granizo registrado en este período.</p> : (
+        <ol className="mt-2 divide-y divide-gray-100">
+          {list.map((z, i) => {
+            const a = assigned.get(z.zip);
+            const max = Math.max(z.radarMax, z.obsMax);
+            return (
+              <li key={z.zip} className={`py-2 ${selected === z.zip ? "bg-red-50 -mx-3 px-3" : ""}`}>
+                <button type="button" className="w-full text-left" onClick={() => onGo(z)}>
+                  <span className="flex items-center gap-2">
+                    <span className="w-6 h-6 shrink-0 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ background: hailColor(max) }}>{i + 1}</span>
+                    <span className="font-semibold">{z.zip} {z.name ?? ""}</span>
+                    <span className="ml-auto text-xs font-bold text-red-800">{max.toFixed(2)}"</span>
+                  </span>
+                  <span className="block text-xs text-gray-600 mt-0.5 ml-8">
+                    {z.frac175 > 0 ? `${Math.round(z.frac175 * 100)}% del ZIP ≥1.75" (radar) · ` : ""}{z.reports} reporte(s) observados{z.lastDate ? ` · último ${fmtDate(z.lastDate)}` : ""}
+                  </span>
+                  {a && <span className={`block text-xs ml-8 font-semibold ${a.repId === me ? "text-gray-900" : "text-gray-500"}`}>{a.repId === me ? "Tu zona asignada" : `Asignada a ${a.repName ?? "otro vendedor"}`}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {zones.length > 5 && <button type="button" className="text-sm font-semibold text-brand mt-1" onClick={() => setAll((v) => !v)}>{all ? "Ver menos" : `Ver las ${zones.length} zonas`}</button>}
+    </details>
+  );
+}
+
+function ZoneCard({ z, rank, assigned, me, onClose }: {
+  z: HailZone; rank: number; assigned: { repId: string; repName: string | null } | null; me: string; onClose: () => void;
+}) {
+  const url = zoneTarget(z);
+  return (
+    <section className="card p-3 space-y-2 border-2 border-red-300" aria-live="polite">
+      <div className="flex justify-between gap-2">
+        <div>
+          <div className="text-xs font-bold text-red-700">Zona #{rank + 1} más afectada</div>
+          <div className="font-bold">{z.zip} {z.name ?? ""}</div>
+        </div>
+        <button type="button" className="text-gray-400 text-lg px-1" onClick={onClose} aria-label="Cerrar">✕</button>
+      </div>
+      <ul className="text-sm text-gray-700 list-disc ml-4 space-y-0.5">{z.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+      {assigned && <p className="text-xs font-semibold">{assigned.repId === me ? "Esta zona está asignada a ti." : `Asignada a ${assigned.repName ?? "otro vendedor"}.`}</p>}
+      <p className="text-xs text-gray-500">Radar = estimación; reportes = observaciones puntuales de NOAA/NWS. Confirma el daño con inspección.</p>
+      <div className="flex flex-wrap gap-2">
+        {url && <a href={url} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-[40px] px-3">Cómo llegar</a>}
+        <Link href={`/tormentas?tab=zips&q=${z.zip}`} className="btn-secondary min-h-[40px] px-3">Más detalle</Link>
+      </div>
+    </section>
+  );
+}
+
+function Legend({ hail }: { hail: boolean }) {
   return (
     <details className="mt-2 card p-2.5 text-xs" open>
       <summary className="font-semibold cursor-pointer">Leyenda</summary>
@@ -396,6 +519,14 @@ function Legend() {
           <span className="inline-flex w-5 h-5 rounded-full bg-gray-700 text-white text-[10px] font-bold items-center justify-center">3</span>
           Número = orden en tu ruta del día · Círculos con número = varios puntos juntos
         </li>
+        {hail && <>
+          {[1.75, 2, 2.25, 2.75].map((m) => (
+            <li key={m} className="flex items-center gap-2"><span className="w-4 h-3 rounded-sm" style={{ background: hailColor(m), opacity: 0.6 }} />Granizo {m}"+ (radar, estimado)</li>
+          ))}
+          <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-gray-900 border border-white" />Granizo observado (≥1")</li>
+          <li className="flex items-center gap-2"><span className="w-4 h-3 border-2 border-red-900 bg-red-100" />ZIP entre las 5 más afectadas</li>
+          <li className="flex items-center gap-2 col-span-2"><span className="w-4 h-3 border-2 border-dashed border-gray-900" />ZIP asignado a ti</li>
+        </>}
       </ul>
       <p className="text-gray-500 mt-2">★ Contrato firmado, en proceso o terminado: posibles referencias. Solo se pueden mencionar a vecinos si el cliente lo autorizó.</p>
     </details>

@@ -4,10 +4,17 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { groupInfo, STREET_STATUS, type LatLng, type MapGroup } from "@/lib/map";
+import { hailColor } from "@/lib/storm";
 
 export type LeafPoint = { id: string; lat: number; lng: number; group: MapGroup; label: string; routeIndex: number | null; authorized: boolean };
 export type LeafStreet = { id: string; status: string; visits: number; lines: [number, number][][]; label: string };
 export type Bounds = { s: number; w: number; n: number; e: number };
+export type HailLayer = {
+  swaths: { geom: [number, number][]; min: number; label: string }[];
+  reports: { lat: number; lng: number; size: number; label: string }[];
+  zones: { zip: string; geom: [number, number][]; rank: number | null; mine: boolean; label: string }[];
+};
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 
 const AUSTIN: [number, number] = [30.4, -97.75]; // vista inicial solo si no hay puntos
 
@@ -21,8 +28,11 @@ function pinHtml(p: LeafPoint, selected: boolean) {
 
 export default function LeafletMap({
   points, streets, showStreets, selectedId, selectedStreetId, start, pickMode, focus, fitKey,
-  tileUrl, tileAttribution, onSelect, onSelectStreet, onPick, onBounds,
+  tileUrl, tileAttribution, onSelect, onSelectStreet, onPick, onBounds, hail, fitBox, onZone,
 }: {
+  hail: HailLayer | null;
+  fitBox: { bbox: number[]; key: number } | null;
+  onZone: (zip: string) => void;
   points: LeafPoint[];
   streets: LeafStreet[];
   showStreets: boolean;
@@ -41,8 +51,8 @@ export default function LeafletMap({
 }) {
   const el = useRef<HTMLDivElement>(null);
   const st = useRef<any>({});
-  const cb = useRef({ onSelect, onSelectStreet, onPick, onBounds, pickMode });
-  cb.current = { onSelect, onSelectStreet, onPick, onBounds, pickMode };
+  const cb = useRef({ onSelect, onSelectStreet, onPick, onBounds, pickMode, onZone });
+  cb.current = { onSelect, onSelectStreet, onPick, onBounds, pickMode, onZone };
 
   // Crear el mapa (solo en el navegador)
   useEffect(() => {
@@ -56,6 +66,9 @@ export default function LeafletMap({
       if (dead || !el.current || st.current.map) return;
       const map = L.map(el.current, { zoomControl: true }).setView(AUSTIN, 10);
       L.tileLayer(tileUrl, { maxZoom: 19, attribution: tileAttribution }).addTo(map);
+      // Granizo debajo de calles y clientes
+      map.createPane("hail"); map.getPane("hail").style.zIndex = 390;
+      const hailLayer = L.layerGroup().addTo(map);
       const streetsLayer = L.layerGroup().addTo(map);
       const cluster = (L as any).markerClusterGroup({
         showCoverageOnHover: false, maxClusterRadius: 45, disableClusteringAtZoom: 17, spiderfyOnMaxZoom: true,
@@ -66,7 +79,7 @@ export default function LeafletMap({
         cb.current.onBounds({ s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast() });
       });
       map.on("click", (e: any) => { if (cb.current.pickMode) cb.current.onPick({ lat: e.latlng.lat, lng: e.latlng.lng }); });
-      st.current = { L, map, cluster, streetsLayer, extra, markers: new Map(), fitted: "" };
+      st.current = { L, map, cluster, streetsLayer, extra, hailLayer, markers: new Map(), fitted: "" };
       st.current.ready = true;
       setTimeout(() => map.invalidateSize(), 50);
       draw();
@@ -78,7 +91,27 @@ export default function LeafletMap({
   function draw() {
     const s = st.current;
     if (!s.ready) return;
-    const { L, map, cluster, streetsLayer, extra } = s;
+    const { L, map, cluster, streetsLayer, extra, hailLayer } = s;
+
+    // Zonas de granizo (radar = estimado; puntos = reportes observados)
+    hailLayer.clearLayers();
+    if (hail) {
+      for (const z of hail.zones) {
+        L.polygon(z.geom, {
+          pane: "hail", color: z.mine ? "#111827" : "#7f1d1d", weight: z.mine ? 3 : z.rank != null && z.rank < 5 ? 2.5 : 1,
+          dashArray: z.mine ? "6 4" : undefined, fillColor: "#dc2626", fillOpacity: z.rank != null && z.rank < 5 ? 0.12 : 0.04,
+        }).bindTooltip(esc(z.label), { sticky: true })
+          .on("click", (e: any) => { L.DomEvent.stopPropagation(e); if (!cb.current.pickMode) cb.current.onZone(z.zip); })
+          .addTo(hailLayer);
+      }
+      for (const w of [...hail.swaths].sort((a, b) => a.min - b.min)) {
+        L.polygon(w.geom, { pane: "hail", color: hailColor(w.min), weight: 1, fillColor: hailColor(w.min), fillOpacity: 0.35, interactive: false }).addTo(hailLayer);
+      }
+      for (const r of hail.reports) {
+        L.circleMarker([r.lat, r.lng], { pane: "hail", radius: 3 + Math.min(5, r.size * 1.5), weight: 1, color: "#fff", fillColor: "#111827", fillOpacity: 0.85 })
+          .bindTooltip(esc(r.label)).addTo(hailLayer);
+      }
+    }
 
     // Calles
     streetsLayer.clearLayers();
@@ -136,6 +169,14 @@ export default function LeafletMap({
     else s.map.setView([focus.lat, focus.lng], focus.zoom ?? Math.max(s.map.getZoom(), 16));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.key]);
+
+  useEffect(() => {
+    const s = st.current;
+    if (!s.ready || !fitBox) return;
+    const b = fitBox.bbox;
+    s.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: [20, 20], maxZoom: 15 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitBox?.key]);
 
   return (
     <div className={`relative h-full w-full ${pickMode ? "cursor-crosshair" : ""}`}>
